@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { GuildMember, DiscordUser, PlayerStats, EconomyData } from '../types';
 import { ROLE_HIERARCHY, ALLOWED_ADMIN_IDS, API_BASE_URL } from '../constants';
@@ -14,7 +13,7 @@ interface UserProfileProps {
 
 // --- UTILS ---
 const formatDate = (ms: number | string) => {
-    if (!ms) return '-';
+    if (!ms || ms === 0) return '-';
     const date = new Date(typeof ms === 'string' ? ms : ms); 
     return date.toLocaleDateString('ru-RU', { 
         day: '2-digit', month: '2-digit', year: 'numeric', 
@@ -38,16 +37,54 @@ type TabType = 'OVERVIEW' | 'WALLET' | 'STATS';
 type TimeFilter = 'ALL' | 'WEEK' | 'DAY';
 type TypeFilter = 'ALL' | 'BAN' | 'MUTE' | 'CHECK';
 
-// --- ICONS (Beautiful SVG Paths) ---
+// --- NEW PREMIUM ICONS ---
 const Icons = {
-    Ban: () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" /></svg>,
-    Mute: () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M17.25 9.75L19.5 12m0 0l2.25 2.25M19.5 12l2.25-2.25M19.5 12l-2.25 2.25m-10.5-6l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75z" /></svg>,
-    Check: () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z" /></svg>,
-    Wallet: () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M21 12a2.25 2.25 0 00-2.25-2.25H15a3 3 0 11-6 0H5.25A2.25 2.25 0 003 12m18 0v6a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 18v-6m18 0V9M3 12V9m18 0a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 9m18 0V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v3" /></svg>,
-    Stats: () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3v11.25A2.25 2.25 0 006 16.5h2.25M3.75 3h-1.5m1.5 0h16.5m0 0h1.5m-1.5 0v11.25A2.25 2.25 0 0118 16.5h-2.25m-7.5 0h7.5m-7.5 0l-1 3m8.5-3l1 3m0 0l.5 1.5m-.5-1.5h-9.5m0 0l-.5 1.5M9 11.25v1.5M12 9v3.75m3-6v6" /></svg>,
-    Time: () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
-    Calendar: () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" /></svg>,
-    Edit: () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" /></svg>
+    // Hammer Icon
+    Ban: () => (
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6">
+            <path fillRule="evenodd" d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25zM12.75 9a.75.75 0 00-1.5 0v2.25H9a.75.75 0 000 1.5h2.25V15a.75.75 0 001.5 0v-2.25H15a.75.75 0 000-1.5h-2.25V9z" clipRule="evenodd" />
+        </svg>
+    ),
+    // Gavel for Ban Stats
+    Gavel: () => (
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-full h-full">
+            <path fillRule="evenodd" d="M15.75 1.5a6.75 6.75 0 00-6.651 7.906c.067.39-.032.717-.221.906l-6.5 6.499a3 3 0 004.243 4.243l6.499-6.5c.189-.189.517-.288.906-.22a6.75 6.75 0 101.724-12.835zm0 13.5a6.74 6.74 0 01-2.812-.609l-4.713 4.713a1.5 1.5 0 01-2.121-2.121l4.713-4.713a6.75 6.75 0 114.933 2.729z" clipRule="evenodd" />
+        </svg>
+    ),
+    // Mute Icon
+    Mute: () => (
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-full h-full">
+            <path d="M13.5 4.06c0-1.336-1.616-2.005-2.56-1.06l-4.5 4.5H4.508c-1.141 0-2.318.664-2.66 1.905A9.76 9.76 0 001.5 12c0 .898.121 1.768.35 2.595.341 1.24 1.518 1.905 2.659 1.905h1.93l4.5 4.5c.945.945 2.561.276 2.561-1.06V4.06zM18.53 9.22a.75.75 0 011.06 0c.27.27.41.64.41 1.03v3.5c0 .39-.14.76-.41 1.03a.75.75 0 11-1.06-1.06c.133-.134.202-.316.202-.5V10.25c0-.184-.07-.366-.202-.5a.75.75 0 010-1.06z" />
+            <path d="M21.364 7.106a.75.75 0 011.06 0 7.468 7.468 0 012.201 5.269c0 2.07-.84 3.946-2.201 5.269a.75.75 0 11-1.06-1.06 5.968 5.968 0 001.76-4.209 5.968 5.968 0 00-1.76-4.21.75.75 0 010-1.06z" />
+        </svg>
+    ),
+    // Check/Verify Icon
+    Check: () => (
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-full h-full">
+             <path fillRule="evenodd" d="M12 1.5a5.25 5.25 0 00-5.25 5.25v3a3 3 0 00-3 3v6.75a3 3 0 003 3h10.5a3 3 0 003-3v-6.75a3 3 0 00-3-3v-3c0-2.9-2.35-5.25-5.25-5.25zm3.75 8.25v-3a3.75 3.75 0 10-7.5 0v3h7.5z" clipRule="evenodd" />
+        </svg>
+    ),
+    // Document/Inspect Icon
+    Inspect: () => (
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-full h-full">
+            <path fillRule="evenodd" d="M7.5 6v.75H5.513c-.96 0-1.764.724-1.865 1.679l-1.263 12A1.875 1.875 0 004.25 22.5h15.5a1.875 1.875 0 001.865-2.071l-1.263-12a1.875 1.875 0 00-1.865-1.679H16.5V6a4.5 4.5 0 10-9 0zM12 3a3 3 0 00-3 3v.75h6V6a3 3 0 00-3-3zm-3 8.25a3 3 0 106 0v.75a3 3 0 10-6 0v-.75z" clipRule="evenodd" />
+        </svg>
+    ),
+    Wallet: () => (
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
+            <path d="M2.25 2.25a.75.75 0 000 1.5h1.386c.17 0 .318.114.362.278l2.558 9.592a3.752 3.752 0 00-2.806 3.63c0 .414.336.75.75.75h15.75a.75.75 0 000-1.5H5.378A2.25 2.25 0 017.5 15h11.218a.75.75 0 00.674-.421 60.358 60.358 0 002.96-7.228.75.75 0 00-.525-.965A60.864 60.864 0 005.68 4.509l-.232-.867A1.875 1.875 0 003.636 2.25H2.25zM3.75 20.25a1.5 1.5 0 113 0 1.5 1.5 0 01-3 0zM16.5 20.25a1.5 1.5 0 113 0 1.5 1.5 0 01-3 0z" />
+        </svg>
+    ),
+    Overview: () => (
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
+             <path fillRule="evenodd" d="M7.5 6a4.5 4.5 0 119 0 4.5 4.5 0 01-9 0zM3.751 20.105a8.25 8.25 0 0116.498 0 .75.75 0 01-.437.695A18.683 18.683 0 0112 22.5c-2.786 0-5.433-.608-7.812-1.7a.75.75 0 01-.437-.695z" clipRule="evenodd" />
+        </svg>
+    ),
+    Stats: () => (
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
+            <path fillRule="evenodd" d="M3 6a3 3 0 013-3h2.25a3 3 0 013 3v2.25a3 3 0 01-3 3H6a3 3 0 01-3-3V6zm9.75 0a3 3 0 013-3H18a3 3 0 013 3v2.25a3 3 0 01-3 3h-2.25a3 3 0 01-3-3V6zM3 15.75a3 3 0 013-3h2.25a3 3 0 013 3V18a3 3 0 01-3 3H6a3 3 0 01-3-3v-2.25zm9.75 0a3 3 0 013-3H18a3 3 0 013 3V18a3 3 0 01-3 3h-2.25a3 3 0 01-3-3v-2.25z" clipRule="evenodd" />
+        </svg>
+    )
 };
 
 
@@ -83,7 +120,6 @@ const UserProfile: React.FC<UserProfileProps> = ({ member, currentUser, onBack, 
 
   useEffect(() => {
     if (member.ign) fetchStats(member.ign);
-    // Fetch economy if Owner OR Admin
     if (isOwner || isAdmin) fetchEconomy(member.user.id);
   }, [member, isOwner, isAdmin]);
 
@@ -112,7 +148,6 @@ const UserProfile: React.FC<UserProfileProps> = ({ member, currentUser, onBack, 
       if (!withdrawIgn.trim()) return alert("Введите никнейм!");
       if (isNaN(amountVal) || amountVal < 5000) return alert("Минимум 5000 AMT.");
       
-      // Client-side validation for balance
       if (economy && amountVal > economy.balance) {
           return alert("Недостаточно средств на балансе!");
       }
@@ -165,10 +200,9 @@ const UserProfile: React.FC<UserProfileProps> = ({ member, currentUser, onBack, 
       let combined = [
           ...stats.bans.map(b => ({...b, type: 'BAN' as const, sort: b.time})),
           ...stats.mutes.map(m => ({...m, type: 'MUTE' as const, sort: m.time})),
-          ...stats.checks.map(c => ({...c, type: 'CHECK' as const, sort: c.date, time: c.date})) // Normalize key
+          ...stats.checks.map(c => ({...c, type: 'CHECK' as const, sort: c.date, time: c.date})) 
       ];
 
-      // Time Filter
       const now = Date.now();
       combined = combined.filter(item => {
           const t = Number(item.time);
@@ -177,7 +211,6 @@ const UserProfile: React.FC<UserProfileProps> = ({ member, currentUser, onBack, 
           return true;
       });
 
-      // Type Filter
       combined = combined.filter(item => {
           if (typeFilter === 'ALL') return true;
           return item.type === typeFilter;
@@ -188,16 +221,12 @@ const UserProfile: React.FC<UserProfileProps> = ({ member, currentUser, onBack, 
 
   const filteredHistory = getFilteredData();
   
-  // Calculate counts for badges based on current time filter (or all time)
   const getCount = (type: string) => {
       if (!stats) return 0;
-      // Using filteredHistory length would respect both filters, 
-      // but usually cards show total for the time period irrespective of type tab selected?
-      // Let's make cards reactive to Time Filter ONLY, but independent of Type Filter tab to act as summaries.
       let list: any[] = [];
       if (type === 'BAN') list = stats.bans;
       if (type === 'MUTE') list = stats.mutes;
-      if (type === 'CHECK') list = stats.checks; // Checks use 'date' not 'time'
+      if (type === 'CHECK') list = stats.checks;
 
       const now = Date.now();
       return list.filter(item => {
@@ -207,6 +236,15 @@ const UserProfile: React.FC<UserProfileProps> = ({ member, currentUser, onBack, 
           return true;
       }).length;
   };
+
+  // Helper for Wallet History Splitting
+  const getWalletHistory = () => {
+      const all = economy?.history || [];
+      const withdrawals = all.filter(t => t.type === 'WITHDRAW' || t.type === 'ADMIN_REMOVE');
+      const incomes = all.filter(t => t.type !== 'WITHDRAW' && t.type !== 'ADMIN_REMOVE');
+      return { withdrawals, incomes };
+  };
+  const { withdrawals, incomes } = getWalletHistory();
 
   return (
     <div className="min-h-screen bg-[#020202] text-white font-sans p-6 flex flex-col items-center">
@@ -244,7 +282,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ member, currentUser, onBack, 
             {/* Nav */}
             <div className="flex gap-2 bg-[#111] p-1.5 rounded-xl border border-white/5 backdrop-blur-md">
                  <button onClick={() => setActiveTab('OVERVIEW')} className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all ${activeTab === 'OVERVIEW' ? 'bg-white text-black shadow-lg' : 'text-gray-500 hover:text-white hover:bg-white/5'}`}>
-                    <Icons.Stats /> Обзор
+                    <Icons.Overview /> Обзор
                  </button>
                  {(isOwner || isAdmin) && (
                      <button onClick={() => setActiveTab('WALLET')} className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all ${activeTab === 'WALLET' ? 'bg-white text-black shadow-lg' : 'text-gray-500 hover:text-white hover:bg-white/5'}`}>
@@ -252,7 +290,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ member, currentUser, onBack, 
                      </button>
                  )}
                  <button onClick={() => setActiveTab('STATS')} className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all ${activeTab === 'STATS' ? 'bg-white text-black shadow-lg' : 'text-gray-500 hover:text-white hover:bg-white/5'}`}>
-                    <Icons.Ban /> Статистика
+                    <Icons.Stats /> Статистика
                  </button>
                  <div className="w-px bg-white/10 mx-1"></div>
                  <button onClick={onBack} className="px-4 py-2.5 text-gray-500 hover:text-white text-[10px] font-bold uppercase transition-colors">✕</button>
@@ -281,19 +319,10 @@ const UserProfile: React.FC<UserProfileProps> = ({ member, currentUser, onBack, 
                                 <div className="text-gray-600 text-xs font-mono uppercase">Скин недоступен</div>
                             )}
                         </div>
-
-                        {/* Quick Stats below skin */}
-                        <div className="w-full grid grid-cols-2 gap-3 z-10">
-                             <div className="bg-[#151515] p-3 rounded-xl border border-white/5 text-center">
-                                 <div className="text-xs text-gray-500 font-bold uppercase mb-1">Дата регистрации</div>
-                                 <div className="text-white text-xs font-mono">{formatDate(member.joined_at)}</div>
-                             </div>
-                             <div className="bg-[#151515] p-3 rounded-xl border border-white/5 text-center">
-                                 <div className="text-xs text-gray-500 font-bold uppercase mb-1">Активность</div>
-                                 <div className="text-white text-xs font-mono">
-                                     {loadingStats ? "..." : (stats ? stats.bans.length + stats.mutes.length + stats.checks.length : 0)} действий
-                                 </div>
-                             </div>
+                        {/* Quick Stats */}
+                        <div className="w-full bg-[#151515] p-4 rounded-xl border border-white/5 text-center z-10">
+                             <div className="text-xs text-gray-500 font-bold uppercase mb-1">Дата вступления</div>
+                             <div className="text-white text-sm font-mono">{formatDate(member.joined_at)}</div>
                         </div>
                     </div>
 
@@ -302,9 +331,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ member, currentUser, onBack, 
                         {/* Playtime Card */}
                         <div className="bg-[#0A0A0A] border border-white/5 rounded-3xl p-8 relative overflow-hidden group">
                             <div className="absolute right-0 top-0 w-64 h-64 bg-emerald-500/10 blur-[80px] group-hover:bg-emerald-500/20 transition-all"></div>
-                            <h3 className="text-gray-500 text-xs font-bold uppercase tracking-widest mb-2 flex items-center gap-2">
-                                <Icons.Time /> Время на сервере
-                            </h3>
+                            <h3 className="text-gray-500 text-xs font-bold uppercase tracking-widest mb-4">Время на сервере</h3>
                             <div className="flex items-baseline gap-4 relative z-10">
                                 <span className="text-7xl font-black text-white tracking-tighter">{stats?.playtime || 0}</span>
                                 <span className="text-xl text-gray-500 font-medium">часов</span>
@@ -315,7 +342,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ member, currentUser, onBack, 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 flex-1">
                              <div className="bg-[#0A0A0A] border border-white/5 rounded-3xl p-8 flex flex-col justify-center">
                                  <h3 className="text-gray-500 text-xs font-bold uppercase tracking-widest mb-4 flex items-center gap-2">
-                                    <Icons.Edit /> Управление профилем
+                                    <Icons.Overview /> Управление профилем
                                  </h3>
                                  <div className="space-y-4">
                                      <div>
@@ -335,15 +362,24 @@ const UserProfile: React.FC<UserProfileProps> = ({ member, currentUser, onBack, 
                                  </div>
                              </div>
                              
-                             {/* Placeholder for future stats or badges */}
-                             <div className="bg-[#0A0A0A] border border-white/5 rounded-3xl p-8 flex items-center justify-center text-center">
-                                 <div>
-                                     <div className="w-12 h-12 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4 text-gray-500">
-                                         <Icons.Check />
+                             {/* Account Info Card (Replaced Efficiency) */}
+                             <div className="bg-[#0A0A0A] border border-white/5 rounded-3xl p-8 flex flex-col justify-center">
+                                 <h3 className="text-gray-500 text-xs font-bold uppercase tracking-widest mb-4">
+                                     Информация об аккаунте
+                                 </h3>
+                                 <div className="space-y-3">
+                                     <div className="flex justify-between items-center pb-2 border-b border-white/5">
+                                         <span className="text-gray-500 text-xs font-bold">Роль</span>
+                                         <span className={`text-xs font-mono px-2 py-0.5 rounded ${roleDef?.badgeBg || 'bg-gray-800'}`}>{roleDef?.name || 'User'}</span>
                                      </div>
-                                     <div className="text-gray-500 text-xs font-bold uppercase tracking-widest">Efficiency Rating</div>
-                                     <div className="text-2xl font-black text-white mt-1">100%</div>
-                                     <div className="text-[10px] text-gray-600 mt-2">Расчетная эффективность</div>
+                                     <div className="flex justify-between items-center pb-2 border-b border-white/5">
+                                         <span className="text-gray-500 text-xs font-bold">Discord ID</span>
+                                         <span className="text-gray-300 text-xs font-mono">{member.user.id}</span>
+                                     </div>
+                                     <div className="flex justify-between items-center">
+                                         <span className="text-gray-500 text-xs font-bold">Статус</span>
+                                         <span className="text-emerald-500 text-xs font-bold uppercase">Активен</span>
+                                     </div>
                                  </div>
                              </div>
                         </div>
@@ -353,74 +389,100 @@ const UserProfile: React.FC<UserProfileProps> = ({ member, currentUser, onBack, 
 
             {/* === WALLET === */}
             {activeTab === 'WALLET' && (
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    {/* Balance Card */}
-                    <div className="lg:col-span-2 bg-gradient-to-br from-[#0F0F0F] to-[#050505] border border-white/5 rounded-3xl p-10 relative overflow-hidden flex flex-col justify-between min-h-[300px]">
-                        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-indigo-600/10 blur-[120px] pointer-events-none"></div>
-                        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-10 mix-blend-overlay"></div>
-                        
-                        <div className="relative z-10">
-                            <h3 className="text-white/40 text-xs font-black uppercase tracking-[0.3em] mb-6">Баланс Кошелька</h3>
-                            <div className="text-8xl font-black text-white tracking-tighter drop-shadow-2xl">
+                <div className="flex flex-col gap-6">
+                    {/* 1. CENTER: BALANCE + ACTION */}
+                    <div className="w-full bg-gradient-to-br from-[#0F0F0F] to-[#050505] border border-white/5 rounded-3xl p-10 relative overflow-hidden flex flex-col items-center justify-center text-center shadow-2xl">
+                         <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-10 mix-blend-overlay"></div>
+                         <div className="absolute top-0 w-full h-px bg-gradient-to-r from-transparent via-purple-500/50 to-transparent"></div>
+                         
+                         <div className="relative z-10">
+                            <h3 className="text-white/40 text-xs font-black uppercase tracking-[0.3em] mb-4">Текущий Баланс</h3>
+                            <div className="text-8xl md:text-9xl font-black text-white tracking-tighter drop-shadow-2xl mb-8 flex items-baseline justify-center">
                                 {loadingEconomy ? "..." : economy?.balance.toLocaleString()}
-                                <span className="text-3xl text-gray-600 font-medium ml-4 tracking-normal">AMT</span>
+                                <span className="text-2xl md:text-3xl text-gray-600 font-medium ml-4 tracking-normal">AMT</span>
+                            </div>
+
+                            {/* Main Action Button */}
+                            {isOwner && (
+                                <button 
+                                    onClick={() => { setWithdrawIgn(member.ign || ''); setIsWithdrawMode(true); }}
+                                    className="bg-white text-black hover:bg-gray-200 px-10 py-4 rounded-xl text-sm font-black uppercase tracking-widest transition-all shadow-[0_0_20px_rgba(255,255,255,0.1)] hover:shadow-[0_0_30px_rgba(255,255,255,0.3)] hover:-translate-y-1 active:translate-y-0"
+                                >
+                                    Вывести средства
+                                </button>
+                            )}
+                         </div>
+                    </div>
+
+                    {/* 2. ADMIN PANEL (Conditional) */}
+                    {isAdmin && !isOwner && (
+                        <div className="bg-[#111] border border-white/10 rounded-2xl p-6 flex flex-col md:flex-row items-center gap-6 shadow-lg">
+                            <div className="flex items-center gap-3">
+                                <span className="w-2 h-2 rounded-full bg-yellow-500 animate-pulse"></span>
+                                <h3 className="text-white text-xs font-bold uppercase tracking-widest">Панель Администратора</h3>
+                            </div>
+                            <div className="flex-1 w-full flex items-center gap-2">
+                                <input 
+                                    type="number" 
+                                    placeholder="Сумма" 
+                                    value={adminAmount}
+                                    onChange={e => setAdminAmount(e.target.value)}
+                                    className="bg-[#050505] border border-white/10 rounded-lg px-4 py-2 text-sm text-white w-full outline-none focus:border-yellow-500/50"
+                                />
+                                <button onClick={() => handleAdminManage('ADMIN_ADD')} className="bg-emerald-900/30 text-emerald-400 border border-emerald-500/30 px-4 py-2 rounded-lg text-[10px] font-bold uppercase hover:bg-emerald-900/50 transition-colors whitespace-nowrap">
+                                    + Выдать
+                                </button>
+                                <button onClick={() => handleAdminManage('ADMIN_REMOVE')} className="bg-red-900/30 text-red-400 border border-red-500/30 px-4 py-2 rounded-lg text-[10px] font-bold uppercase hover:bg-red-900/50 transition-colors whitespace-nowrap">
+                                    - Забрать
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* 3. SPLIT HISTORY: WITHDRAWALS (LEFT) | INCOME (RIGHT) */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        
+                        {/* LEFT: Withdrawals */}
+                        <div className="bg-[#0A0A0A] border border-white/5 rounded-3xl p-6 flex flex-col h-[400px]">
+                            <h3 className="text-red-500 text-[10px] font-bold uppercase tracking-widest mb-4 flex items-center gap-2">
+                                <span className="w-1.5 h-1.5 rounded-full bg-red-500"></span> История выводов
+                            </h3>
+                            <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 space-y-2">
+                                {withdrawals.length === 0 ? (
+                                    <div className="flex items-center justify-center h-full text-gray-700 text-xs font-bold uppercase tracking-widest">Нет выводов</div>
+                                ) : (
+                                    withdrawals.map(tx => (
+                                        <div key={tx.id} className="flex justify-between items-center p-3 rounded-xl bg-[#111] border border-white/5 hover:border-white/10 transition-colors">
+                                            <div>
+                                                <div className="text-gray-300 text-xs font-bold">{tx.comment || 'Вывод средств'}</div>
+                                                <div className="text-[10px] text-gray-600 font-mono">{formatDate(tx.date)}</div>
+                                            </div>
+                                            <div className="font-mono text-sm font-bold text-red-400">
+                                                {tx.amount} AMT
+                                            </div>
+                                        </div>
+                                    ))
+                                )}
                             </div>
                         </div>
 
-                        {/* Owner Withdraw Controls */}
-                        {isOwner && (
-                             <div className="relative z-10 mt-8 pt-8 border-t border-white/5">
-                                 <button 
-                                     onClick={() => { setWithdrawIgn(member.ign || ''); setIsWithdrawMode(true); }}
-                                     className="bg-white text-black hover:bg-gray-200 px-8 py-4 rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-lg hover:shadow-white/20 hover:-translate-y-1 active:translate-y-0"
-                                 >
-                                     Вывести на сервер
-                                 </button>
-                             </div>
-                        )}
-                    </div>
-
-                    {/* Admin Panel (If viewing someone else) OR History */}
-                    <div className="flex flex-col gap-6">
-                        {isAdmin && !isOwner && (
-                            <div className="bg-[#111] border border-white/10 rounded-3xl p-6">
-                                <h3 className="text-gray-500 text-[10px] font-bold uppercase tracking-widest mb-4 flex items-center gap-2">
-                                    <span className="w-2 h-2 rounded-full bg-yellow-500"></span> Панель Администратора
-                                </h3>
-                                <div className="flex flex-col gap-3">
-                                    <input 
-                                        type="number" 
-                                        placeholder="Сумма" 
-                                        value={adminAmount}
-                                        onChange={e => setAdminAmount(e.target.value)}
-                                        className="bg-[#050505] border border-white/10 rounded-lg px-4 py-3 text-sm text-white w-full outline-none focus:border-yellow-500/50"
-                                    />
-                                    <div className="grid grid-cols-2 gap-2">
-                                        <button onClick={() => handleAdminManage('ADMIN_ADD')} className="bg-emerald-900/30 text-emerald-400 border border-emerald-500/30 py-2 rounded-lg text-[10px] font-bold uppercase hover:bg-emerald-900/50 transition-colors">
-                                            + Выдать
-                                        </button>
-                                        <button onClick={() => handleAdminManage('ADMIN_REMOVE')} className="bg-red-900/30 text-red-400 border border-red-500/30 py-2 rounded-lg text-[10px] font-bold uppercase hover:bg-red-900/50 transition-colors">
-                                            - Забрать
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
-                        <div className="bg-[#0A0A0A] border border-white/5 rounded-3xl p-6 flex-1 overflow-hidden flex flex-col">
-                            <h3 className="text-gray-500 text-[10px] font-bold uppercase tracking-widest mb-4">История</h3>
+                        {/* RIGHT: Income */}
+                        <div className="bg-[#0A0A0A] border border-white/5 rounded-3xl p-6 flex flex-col h-[400px]">
+                             <h3 className="text-emerald-500 text-[10px] font-bold uppercase tracking-widest mb-4 flex items-center gap-2">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> История пополнений
+                            </h3>
                             <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 space-y-2">
-                                {economy?.history.length === 0 ? (
-                                    <div className="text-center text-gray-700 text-xs py-10">Пусто</div>
+                                {incomes.length === 0 ? (
+                                    <div className="flex items-center justify-center h-full text-gray-700 text-xs font-bold uppercase tracking-widest">Нет пополнений</div>
                                 ) : (
-                                    economy?.history.map(tx => (
-                                        <div key={tx.id} className="flex justify-between items-center p-3 rounded-xl bg-[#111] border border-white/5 hover:border-white/10 transition-colors group">
+                                    incomes.map(tx => (
+                                        <div key={tx.id} className="flex justify-between items-center p-3 rounded-xl bg-[#111] border border-white/5 hover:border-white/10 transition-colors">
                                             <div>
-                                                <div className="text-gray-300 text-xs font-bold group-hover:text-white transition-colors">{tx.comment || tx.type}</div>
+                                                <div className="text-gray-300 text-xs font-bold">{tx.comment || tx.type}</div>
                                                 <div className="text-[10px] text-gray-600 font-mono">{formatDate(tx.date)}</div>
                                             </div>
-                                            <div className={`font-mono text-sm font-bold ${tx.amount > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                                                {tx.amount > 0 ? '+' : ''}{tx.amount}
+                                            <div className="font-mono text-sm font-bold text-emerald-400">
+                                                +{tx.amount} AMT
                                             </div>
                                         </div>
                                     ))
@@ -435,9 +497,8 @@ const UserProfile: React.FC<UserProfileProps> = ({ member, currentUser, onBack, 
             {activeTab === 'STATS' && (
                 <div className="flex flex-col gap-8">
                     
-                    {/* Filters Toolbar */}
+                    {/* Filters */}
                     <div className="flex flex-col md:flex-row justify-between items-center gap-4 bg-[#0A0A0A] border border-white/5 p-2 rounded-2xl">
-                        {/* Type Tabs */}
                         <div className="flex gap-1 bg-[#111] p-1 rounded-xl">
                             {(['ALL', 'BAN', 'MUTE', 'CHECK'] as const).map(t => (
                                 <button 
@@ -449,8 +510,6 @@ const UserProfile: React.FC<UserProfileProps> = ({ member, currentUser, onBack, 
                                 </button>
                             ))}
                         </div>
-                        
-                        {/* Time Tabs */}
                         <div className="flex gap-1 bg-[#111] p-1 rounded-xl">
                             {(['ALL', 'WEEK', 'DAY'] as const).map(t => (
                                 <button 
@@ -464,27 +523,27 @@ const UserProfile: React.FC<UserProfileProps> = ({ member, currentUser, onBack, 
                         </div>
                     </div>
 
-                    {/* KPI Cards (Reactive to Time Filter) */}
+                    {/* KPI Cards */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div className="bg-[#0A0A0A] border border-white/5 rounded-3xl p-8 relative overflow-hidden group">
-                            <div className="absolute right-[-20px] bottom-[-20px] text-[#111] group-hover:text-red-900/20 transition-colors transform group-hover:scale-110 duration-500">
-                                <svg className="w-32 h-32" fill="currentColor" viewBox="0 0 24 24"><path d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" /></svg>
+                            <div className="absolute right-[-20px] bottom-[-20px] text-[#111] group-hover:text-red-900/20 transition-colors transform group-hover:scale-110 duration-500 w-32 h-32">
+                                <Icons.Gavel />
                             </div>
                             <h3 className="text-red-500 text-xs font-black uppercase tracking-widest mb-2">Банов</h3>
                             <div className="text-6xl font-black text-white">{getCount('BAN')}</div>
                         </div>
 
                         <div className="bg-[#0A0A0A] border border-white/5 rounded-3xl p-8 relative overflow-hidden group">
-                             <div className="absolute right-[-20px] bottom-[-20px] text-[#111] group-hover:text-orange-900/20 transition-colors transform group-hover:scale-110 duration-500">
-                                <svg className="w-32 h-32" fill="currentColor" viewBox="0 0 24 24"><path d="M17.25 9.75L19.5 12m0 0l2.25 2.25M19.5 12l2.25-2.25M19.5 12l-2.25 2.25m-10.5-6l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75z" /></svg>
+                             <div className="absolute right-[-20px] bottom-[-20px] text-[#111] group-hover:text-orange-900/20 transition-colors transform group-hover:scale-110 duration-500 w-32 h-32">
+                                <Icons.Mute />
                             </div>
                             <h3 className="text-orange-500 text-xs font-black uppercase tracking-widest mb-2">Мутов</h3>
                             <div className="text-6xl font-black text-white">{getCount('MUTE')}</div>
                         </div>
 
                          <div className="bg-[#0A0A0A] border border-white/5 rounded-3xl p-8 relative overflow-hidden group">
-                             <div className="absolute right-[-20px] bottom-[-20px] text-[#111] group-hover:text-blue-900/20 transition-colors transform group-hover:scale-110 duration-500">
-                                <svg className="w-32 h-32" fill="currentColor" viewBox="0 0 24 24"><path d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z" /></svg>
+                             <div className="absolute right-[-20px] bottom-[-20px] text-[#111] group-hover:text-blue-900/20 transition-colors transform group-hover:scale-110 duration-500 w-32 h-32">
+                                <Icons.Inspect />
                             </div>
                             <h3 className="text-blue-500 text-xs font-black uppercase tracking-widest mb-2">Проверок</h3>
                             <div className="text-6xl font-black text-white">{getCount('CHECK')}</div>
@@ -505,16 +564,16 @@ const UserProfile: React.FC<UserProfileProps> = ({ member, currentUser, onBack, 
                         ) : (
                             filteredHistory.map((item, idx) => (
                                 <div key={idx} className="bg-[#0A0A0A] border border-white/5 rounded-2xl p-6 flex flex-col md:flex-row md:items-center gap-6 group hover:border-white/10 transition-colors">
-                                    {/* Icon Box */}
                                     <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${
                                         item.type === 'BAN' ? 'bg-red-500/10 text-red-500' : 
                                         item.type === 'MUTE' ? 'bg-orange-500/10 text-orange-500' : 
                                         'bg-blue-500/10 text-blue-500'
                                     }`}>
-                                        {item.type === 'BAN' ? <Icons.Ban /> : item.type === 'MUTE' ? <Icons.Mute /> : <Icons.Check />}
+                                        <div className="w-6 h-6">
+                                            {item.type === 'BAN' ? <Icons.Ban /> : item.type === 'MUTE' ? <Icons.Mute /> : <Icons.Check />}
+                                        </div>
                                     </div>
 
-                                    {/* Content */}
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center gap-3 mb-1">
                                             <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded ${
@@ -525,26 +584,41 @@ const UserProfile: React.FC<UserProfileProps> = ({ member, currentUser, onBack, 
                                                 {item.type === 'BAN' ? 'Блокировка' : item.type === 'MUTE' ? 'Мут' : 'Проверка'}
                                             </span>
                                             <span className="text-[10px] text-gray-500 font-mono flex items-center gap-1">
-                                                <Icons.Calendar /> {formatDate(item.time)}
+                                                {formatDate(item.time)}
                                             </span>
                                         </div>
                                         <div className="text-white font-bold text-lg truncate pr-4">
                                             {item.type === 'CHECK' ? `Игрок: ${item.target}` : item.reason}
                                         </div>
-                                        {item.type !== 'CHECK' && (
-                                            <div className="flex flex-wrap gap-4 mt-2">
-                                                <div className="text-[11px] text-gray-400 font-mono flex items-center gap-1.5">
-                                                    <span className="w-1.5 h-1.5 rounded-full bg-gray-600"></span>
-                                                    Срок: <span className="text-gray-300">{getDurationString(item.time, item.until)}</span>
+                                        
+                                        {/* DETAIL ROW */}
+                                        <div className="flex flex-wrap gap-4 mt-2">
+                                            {item.type === 'CHECK' ? (
+                                                // Check Specific Details
+                                                <div className="text-[11px] text-blue-400 font-mono flex items-center gap-1.5">
+                                                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+                                                    Метод: <span className="text-white font-bold uppercase">{item.type /* contains 'Anydesk' or 'Discord' from backend map */}</span>
                                                 </div>
-                                                {!item.active && (
-                                                     <div className="text-[11px] text-emerald-500 font-mono flex items-center gap-1.5">
-                                                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                                                        Снят: {item.removed_by_name || 'System'}
+                                            ) : (
+                                                // Ban/Mute Details
+                                                <>
+                                                    <div className="text-[11px] text-gray-400 font-mono flex items-center gap-1.5">
+                                                        <span className="w-1.5 h-1.5 rounded-full bg-gray-600"></span>
+                                                        Срок: <span className="text-gray-300">{getDurationString(item.time, item.until)}</span>
                                                     </div>
-                                                )}
-                                            </div>
-                                        )}
+                                                    <div className="text-[11px] text-gray-400 font-mono flex items-center gap-1.5">
+                                                        <span className="w-1.5 h-1.5 rounded-full bg-gray-600"></span>
+                                                        Истекает: <span className="text-gray-300">{item.until <= 0 ? 'Никогда' : formatDate(item.until)}</span>
+                                                    </div>
+                                                    {!item.active && (
+                                                         <div className="text-[11px] text-emerald-500 font-mono flex items-center gap-1.5">
+                                                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                                            Снят: {item.removed_by_name || 'System'}
+                                                        </div>
+                                                    )}
+                                                </>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
                             ))
