@@ -42,7 +42,8 @@ const UserProfile: React.FC<UserProfileProps> = ({ member, currentUser, onBack, 
   
   // Withdraw Actions
   const [withdrawAmount, setWithdrawAmount] = useState('');
-  const [isWithdrawMode, setIsWithdrawMode] = useState(false); // Mode to show input in banner
+  const [withdrawIgn, setWithdrawIgn] = useState(''); // NEW: IGN for withdraw
+  const [isWithdrawMode, setIsWithdrawMode] = useState(false); // Mode to show modal
   const [isProcessingTx, setIsProcessingTx] = useState(false);
   
   // Admin Manage State
@@ -199,10 +200,17 @@ const UserProfile: React.FC<UserProfileProps> = ({ member, currentUser, onBack, 
 
   const handleWithdraw = async () => {
       if (!isOwner) return;
-      if (!member.ign) {
-          alert("Привяжите ник Minecraft в профиле перед выводом!");
+      
+      // Validation
+      if (!withdrawIgn.trim()) {
+          alert("Введите никнейм для вывода!");
           return;
       }
+      if (!withdrawAmount || isNaN(parseInt(withdrawAmount)) || parseInt(withdrawAmount) < 5000) {
+           alert("Минимальная сумма вывода: 5000 AMT");
+           return;
+      }
+
       setIsProcessingTx(true);
       try {
           const res = await fetch(`${API_BASE_URL}/api/economy/withdraw`, {
@@ -211,15 +219,15 @@ const UserProfile: React.FC<UserProfileProps> = ({ member, currentUser, onBack, 
               body: JSON.stringify({
                   userId: member.user.id,
                   amount: withdrawAmount,
-                  ign: member.ign
+                  ign: withdrawIgn.trim()
               })
           });
           const data = await res.json();
           if (res.ok) {
               setWithdrawAmount('');
-              setIsWithdrawMode(false);
+              setIsWithdrawMode(false); // Close modal
               fetchEconomy(member.user.id);
-              alert(`Успешно выведено ${withdrawAmount} аметринов на ник ${member.ign}`);
+              alert(`Успешно выведено ${withdrawAmount} аметринов на ник ${withdrawIgn}`);
           } else {
               alert(data.error);
           }
@@ -228,6 +236,12 @@ const UserProfile: React.FC<UserProfileProps> = ({ member, currentUser, onBack, 
       } finally {
           setIsProcessingTx(false);
       }
+  };
+
+  const openWithdrawModal = () => {
+      if (!isOwner) return;
+      setWithdrawIgn(member.ign || ''); // Pre-fill with linked IGN
+      setIsWithdrawMode(true);
   };
 
   const handleAdminManage = async (type: 'ADMIN_ADD' | 'ADMIN_REMOVE') => {
@@ -529,11 +543,11 @@ const UserProfile: React.FC<UserProfileProps> = ({ member, currentUser, onBack, 
                                     <div className="glass-card p-6 rounded-2xl border border-red-500/10 hover:border-red-500/30 group transition-all flex items-center justify-between">
                                         {/* Left: Huge Icon */}
                                         <div className="text-red-500/20 group-hover:text-red-500/30 transition-colors">
-                                           <svg className="w-20 h-20" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 11H7v-2h10v2z"/></svg>
+                                           <svg className="w-16 h-16" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 11H7v-2h10v2z"/></svg>
                                         </div>
                                         {/* Right: Info */}
-                                        <div className="flex flex-col items-end">
-                                            <span className="text-xs font-bold text-red-500 tracking-[0.2em] mb-1">BANS</span>
+                                        <div className="flex flex-col items-end h-full justify-between py-1">
+                                            <span className="text-xs font-bold text-red-500 tracking-[0.2em]">BANS</span>
                                             <span className="text-5xl font-black text-white tracking-tighter drop-shadow-lg">{stats.bans.length}</span>
                                         </div>
                                     </div>
@@ -542,11 +556,11 @@ const UserProfile: React.FC<UserProfileProps> = ({ member, currentUser, onBack, 
                                     <div className="glass-card p-6 rounded-2xl border border-orange-500/10 hover:border-orange-500/30 group transition-all flex items-center justify-between">
                                         {/* Left: Huge Icon */}
                                         <div className="text-orange-500/20 group-hover:text-orange-500/30 transition-colors">
-                                            <svg className="w-20 h-20" fill="currentColor" viewBox="0 0 24 24"><path d="M7 11v2h10v-2H7zm5-9C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/></svg>
+                                            <svg className="w-16 h-16" fill="currentColor" viewBox="0 0 24 24"><path d="M7 11v2h10v-2H7zm5-9C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/></svg>
                                         </div>
                                         {/* Right: Info */}
-                                        <div className="flex flex-col items-end">
-                                            <span className="text-xs font-bold text-orange-500 tracking-[0.2em] mb-1">MUTES</span>
+                                        <div className="flex flex-col items-end h-full justify-between py-1">
+                                            <span className="text-xs font-bold text-orange-500 tracking-[0.2em]">MUTES</span>
                                             <span className="text-5xl font-black text-white tracking-tighter drop-shadow-lg">{stats.mutes.length}</span>
                                         </div>
                                     </div>
@@ -555,11 +569,11 @@ const UserProfile: React.FC<UserProfileProps> = ({ member, currentUser, onBack, 
                                     <div className="glass-card p-6 rounded-2xl border border-blue-500/10 hover:border-blue-500/30 group transition-all flex items-center justify-between">
                                         {/* Left: Huge Icon */}
                                         <div className="text-blue-500/20 group-hover:text-blue-500/30 transition-colors">
-                                            <svg className="w-20 h-20" fill="currentColor" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+                                            <svg className="w-16 h-16" fill="currentColor" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
                                         </div>
                                         {/* Right: Info */}
-                                        <div className="flex flex-col items-end">
-                                            <span className="text-xs font-bold text-blue-500 tracking-[0.2em] mb-1">CHECKS</span>
+                                        <div className="flex flex-col items-end h-full justify-between py-1">
+                                            <span className="text-xs font-bold text-blue-500 tracking-[0.2em]">CHECKS</span>
                                             <span className="text-5xl font-black text-white tracking-tighter drop-shadow-lg">{stats.checks.length}</span>
                                         </div>
                                     </div>
@@ -689,41 +703,15 @@ const UserProfile: React.FC<UserProfileProps> = ({ member, currentUser, onBack, 
                                             <span className="text-2xl ml-2 font-bold opacity-70 align-top">AMT</span>
                                         </div>
 
-                                        {/* Dynamic Withdraw Section */}
+                                        {/* Withdraw Button (Triggers Modal) */}
                                         <div className="h-14 flex items-center justify-center">
-                                            {isWithdrawMode ? (
-                                                <div className="flex items-center gap-2 animate-fade-in bg-white/20 p-1.5 rounded-xl backdrop-blur-md border border-white/20">
-                                                    <input 
-                                                        type="number" 
-                                                        value={withdrawAmount}
-                                                        onChange={(e) => setWithdrawAmount(e.target.value)}
-                                                        placeholder="Сумма"
-                                                        className="w-32 bg-transparent text-white placeholder-white/60 font-mono text-lg font-bold text-center outline-none"
-                                                        autoFocus
-                                                    />
-                                                    <button 
-                                                        onClick={handleWithdraw}
-                                                        disabled={isProcessingTx}
-                                                        className="bg-white text-blue-600 px-4 py-2 rounded-lg text-xs font-bold uppercase hover:bg-gray-100 transition-colors disabled:opacity-50"
-                                                    >
-                                                        {isProcessingTx ? '...' : 'Подтвердить'}
-                                                    </button>
-                                                    <button 
-                                                        onClick={() => setIsWithdrawMode(false)}
-                                                        className="px-3 py-2 text-white/70 hover:text-white transition-colors"
-                                                    >
-                                                        ✕
-                                                    </button>
-                                                </div>
-                                            ) : (
-                                                <button 
-                                                    onClick={() => isOwner ? setIsWithdrawMode(true) : null}
-                                                    disabled={!isOwner}
-                                                    className="bg-black/20 hover:bg-black/30 text-white border border-white/20 px-8 py-3 rounded-xl font-bold uppercase tracking-wider text-sm transition-all backdrop-blur-sm hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
-                                                >
-                                                    Вывести средства
-                                                </button>
-                                            )}
+                                            <button 
+                                                onClick={openWithdrawModal}
+                                                disabled={!isOwner}
+                                                className="bg-black/20 hover:bg-black/30 text-white border border-white/20 px-8 py-3 rounded-xl font-bold uppercase tracking-wider text-sm transition-all backdrop-blur-sm hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                                            >
+                                                Вывести средства
+                                            </button>
                                         </div>
                                     </div>
                                 </div>
@@ -823,6 +811,58 @@ const UserProfile: React.FC<UserProfileProps> = ({ member, currentUser, onBack, 
                     </div>
                  )}
             </div>
+            
+            {/* --- WITHDRAW MODAL --- */}
+            {isWithdrawMode && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fade-in">
+                    <div className="bg-[#0f0f0f] border border-white/10 rounded-2xl p-6 w-full max-w-sm shadow-2xl relative">
+                        <button 
+                            onClick={() => setIsWithdrawMode(false)}
+                            className="absolute top-4 right-4 text-gray-500 hover:text-white transition-colors"
+                        >
+                            ✕
+                        </button>
+                        
+                        <h3 className="text-xl font-bold text-white mb-1">Вывод средств</h3>
+                        <p className="text-xs text-gray-500 mb-6">Заполните данные для перевода на сервер</p>
+                        
+                        <div className="space-y-4">
+                            <div>
+                                <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1.5 block">Никнейм</label>
+                                <input 
+                                    type="text" 
+                                    value={withdrawIgn}
+                                    onChange={(e) => setWithdrawIgn(e.target.value)}
+                                    placeholder="Ваш ник..."
+                                    className="glass-input w-full h-10 rounded-lg px-3 text-sm font-mono placeholder-gray-700 focus:border-purple-500 transition-colors"
+                                />
+                            </div>
+                            
+                            <div>
+                                <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1.5 block">Сумма (AMT)</label>
+                                <input 
+                                    type="number" 
+                                    value={withdrawAmount}
+                                    onChange={(e) => setWithdrawAmount(e.target.value)}
+                                    placeholder="5000"
+                                    className="glass-input w-full h-10 rounded-lg px-3 text-sm font-mono placeholder-gray-700 focus:border-purple-500 transition-colors"
+                                />
+                            </div>
+
+                            <div className="pt-2">
+                                <ModernButton 
+                                    onClick={handleWithdraw} 
+                                    isLoading={isProcessingTx} 
+                                    fullWidth 
+                                    className="h-10"
+                                >
+                                    Подтвердить вывод
+                                </ModernButton>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     </div>
   );
