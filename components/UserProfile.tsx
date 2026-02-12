@@ -11,7 +11,7 @@ interface UserProfileProps {
   onUpdate: () => void;
 }
 
-// Форматирование даты
+// Форматирование даты (DD.MM.YYYY, HH:MM)
 const formatDate = (ms: number | string) => {
     if (!ms) return '-';
     const date = new Date(typeof ms === 'string' ? ms : ms); 
@@ -21,79 +21,80 @@ const formatDate = (ms: number | string) => {
     });
 };
 
-type TimeFilter = 'ALL' | 'DAY' | 'WEEK' | 'MONTH';
+// Вычисляем дату истечения (для примера добавляем 30 дней, если пермач - пишем навсегда)
+const getExpiryDate = (startDate: number, duration: number) => {
+    if (duration <= 0 || duration === -1) return "Никогда";
+    const end = new Date(startDate + duration); // duration usually in ms in LiteBans if stored, but logic varies. 
+    // Assuming litebans 'until' column is absolute timestamp
+    if (duration > 4102444800000) return "Никогда"; // > 2100 year
+    return formatDate(duration);
+};
+
+// Функция расчета длительности (примерная)
+const getDurationString = (start: number, end: number) => {
+    if (end <= 0 || end === -1) return "Навсегда";
+    const diff = end - start;
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    if (days > 3650) return "Навсегда";
+    return `${days}д 0ч`; 
+};
+
+type TabType = 'OVERVIEW' | 'WALLET' | 'STATS';
 
 const UserProfile: React.FC<UserProfileProps> = ({ member, currentUser, onBack, onUpdate }) => {
-  const [activeTab, setActiveTab] = useState<'PROFILE' | 'STATS' | 'SALARY'>('PROFILE');
-  const [statSubTab, setStatSubTab] = useState<'ALL' | 'BANS' | 'MUTES' | 'CHECKS'>('ALL');
-  const [timeFilter, setTimeFilter] = useState<TimeFilter>('ALL');
+  const isOwner = member.user.id === currentUser.id;
+  const isAdmin = ALLOWED_ADMIN_IDS.includes(currentUser.id);
+
+  // Default tab logic: Owner gets Overview, others get Stats by default or Overview
+  const [activeTab, setActiveTab] = useState<TabType>('STATS');
   
   const [ignInput, setIgnInput] = useState(member.ign || '');
   const [isSaving, setIsSaving] = useState(false);
   const [displayedName, setDisplayedName] = useState('');
   
-  // Stats State
+  // Stats & Economy Data
   const [stats, setStats] = useState<PlayerStats | null>(null);
   const [loadingStats, setLoadingStats] = useState(false);
-
-  // Economy State
   const [economy, setEconomy] = useState<EconomyData | null>(null);
   const [loadingEconomy, setLoadingEconomy] = useState(false);
   
-  // Withdraw Actions
+  // Actions
   const [withdrawAmount, setWithdrawAmount] = useState('');
-  const [withdrawIgn, setWithdrawIgn] = useState(''); // NEW: IGN for withdraw
-  const [isWithdrawMode, setIsWithdrawMode] = useState(false); // Mode to show modal
+  const [withdrawIgn, setWithdrawIgn] = useState('');
+  const [isWithdrawMode, setIsWithdrawMode] = useState(false);
   const [isProcessingTx, setIsProcessingTx] = useState(false);
-  
-  // Admin Manage State
   const [adminAmount, setAdminAmount] = useState('');
 
-  // 3D Skin State
+  // 3D
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const skinViewerRef = useRef<any>(null);
   const [autoRotate, setAutoRotate] = useState(true);
-  const [is3DLoadError, setIs3DLoadError] = useState(false); // Состояние ошибки 3D
-
-  const isAdmin = ALLOWED_ADMIN_IDS.includes(currentUser.id);
-  const isOwner = member.user.id === currentUser.id;
 
   useEffect(() => {
     setDisplayedName(member.ign || member.nick || member.user.global_name || member.user.username);
     setIgnInput(member.ign || '');
+    // Если мы не владелец и пытаемся зайти в кошелек (например, по стейту) - сбрасываем
+    if (!isOwner && activeTab === 'WALLET') setActiveTab('STATS');
+  }, [member, isOwner]);
+
+  useEffect(() => {
+    if (member.ign) fetchStats(member.ign);
+    if (isOwner || isAdmin) fetchEconomy(member.user.id);
   }, [member]);
 
-  // Загружаем статистику и экономику
+  // 3D Viewer Logic (Only render when OVERVIEW tab is active)
   useEffect(() => {
-    if (member.ign) {
-        fetchStats(member.ign);
-    }
-    fetchEconomy(member.user.id);
-  }, [member]);
-
-  // Инициализация 3D Вьювера
-  useEffect(() => {
-      setIs3DLoadError(false);
-
-      if (activeTab !== 'PROFILE' || !member.ign) {
-          return;
-      }
-
+      if (activeTab !== 'OVERVIEW' || !member.ign) return;
+      
       const initViewer = () => {
           if (!canvasRef.current) return;
-
           try {
                 if (skinViewerRef.current) {
                     skinViewerRef.current.dispose();
                     skinViewerRef.current = null;
                 }
-
                 const skinview3d = (window as any).skinview3d;
-                if (!skinview3d) {
-                    console.error("SkinView3D lib is missing (initViewer called but window.skinview3d is undefined)");
-                    setIs3DLoadError(true);
-                    return;
-                }
+                if (!skinview3d) return;
 
                 const viewer = new skinview3d.SkinViewer({
                     canvas: canvasRef.current,
@@ -102,768 +103,380 @@ const UserProfile: React.FC<UserProfileProps> = ({ member, currentUser, onBack, 
                     skin: `https://mc-heads.net/skin/${member.ign}`,
                     alpha: true
                 });
-
-                viewer.width = 300;
+                viewer.width = 300; 
                 viewer.height = 400;
                 viewer.fov = 70;
-                viewer.zoom = 0.9;
+                viewer.zoom = 0.8;
                 viewer.autoRotate = autoRotate;
-                viewer.autoRotateSpeed = 1.0;
                 viewer.animation = new skinview3d.WalkingAnimation();
-                viewer.animation.speed = 0.5;
-
                 skinViewerRef.current = viewer;
-          } catch (e) {
-              console.error("Error initializing 3D viewer:", e);
-              setIs3DLoadError(true);
-          }
+          } catch (e) { console.error(e); }
       };
 
-      if ((window as any).skinview3d) {
-          initViewer();
-      } else {
-          const SRC = "https://cdn.jsdelivr.net/npm/skinview3d@3.0.0-alpha.1/dist/skinview3d.bundle.js";
-          let script = document.querySelector(`script[src="${SRC}"]`) as HTMLScriptElement;
-
-          if (!script) {
-              script = document.createElement('script');
-              script.src = SRC;
-              script.async = true;
-              document.body.appendChild(script);
-          }
-
-          const onScriptLoad = () => {
-              setTimeout(initViewer, 50);
-          };
-          
-          const onScriptError = () => {
-              console.error("Failed to load skinview3d script");
-              setIs3DLoadError(true);
-          };
-
-          script.addEventListener('load', onScriptLoad);
-          script.addEventListener('error', onScriptError);
-
-          return () => {
-              script.removeEventListener('load', onScriptLoad);
-              script.removeEventListener('error', onScriptError);
-              if (skinViewerRef.current) {
-                  skinViewerRef.current.dispose();
-                  skinViewerRef.current = null;
-              }
-          };
+      if ((window as any).skinview3d) initViewer();
+      else {
+          // Load script fallback
+          const script = document.createElement('script');
+          script.src = "https://cdn.jsdelivr.net/npm/skinview3d@3.0.0-alpha.1/dist/skinview3d.bundle.js";
+          script.async = true;
+          script.onload = () => setTimeout(initViewer, 100);
+          document.body.appendChild(script);
       }
-
-      return () => {
-          if (skinViewerRef.current) {
-              skinViewerRef.current.dispose();
-              skinViewerRef.current = null;
-          }
-      };
+      return () => { if (skinViewerRef.current) skinViewerRef.current.dispose(); };
   }, [activeTab, member.ign]);
-
-  useEffect(() => {
-      if (skinViewerRef.current) {
-          skinViewerRef.current.autoRotate = autoRotate;
-      }
-  }, [autoRotate]);
 
   const fetchStats = async (ign: string) => {
     setLoadingStats(true);
     try {
         const res = await fetch(`${API_BASE_URL}/api/stats/${ign}`);
-        if (res.ok) {
-            const data = await res.json();
-            setStats(data);
-        }
-    } catch (e) {
-        console.error("Failed to load stats", e);
-    } finally {
-        setLoadingStats(false);
-    }
+        if (res.ok) setStats(await res.json());
+    } catch (e) { console.error(e); } 
+    finally { setLoadingStats(false); }
   };
 
   const fetchEconomy = async (userId: string) => {
       setLoadingEconomy(true);
       try {
           const res = await fetch(`${API_BASE_URL}/api/economy/${userId}`);
-          if (res.ok) {
-              const data = await res.json();
-              setEconomy(data);
-          }
-      } catch (e) {
-          console.error("Failed to load economy", e);
-      } finally {
-          setLoadingEconomy(false);
-      }
+          if (res.ok) setEconomy(await res.json());
+      } catch (e) { console.error(e); } 
+      finally { setLoadingEconomy(false); }
   };
 
   const handleWithdraw = async () => {
       if (!isOwner) return;
-      
-      // Validation
-      if (!withdrawIgn.trim()) {
-          alert("Введите никнейм для вывода!");
-          return;
-      }
-      if (!withdrawAmount || isNaN(parseInt(withdrawAmount)) || parseInt(withdrawAmount) < 5000) {
-           alert("Минимальная сумма вывода: 5000 AMT");
+      if (!withdrawIgn.trim() || !withdrawAmount || parseInt(withdrawAmount) < 5000) {
+           alert("Некорректные данные. Минимум 5000 AMT.");
            return;
       }
-
       setIsProcessingTx(true);
       try {
           const res = await fetch(`${API_BASE_URL}/api/economy/withdraw`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                  userId: member.user.id,
-                  amount: withdrawAmount,
-                  ign: withdrawIgn.trim()
-              })
-          });
-          const data = await res.json();
-          if (res.ok) {
-              setWithdrawAmount('');
-              setIsWithdrawMode(false); // Close modal
-              fetchEconomy(member.user.id);
-              alert(`Успешно выведено ${withdrawAmount} аметринов на ник ${withdrawIgn}`);
-          } else {
-              alert(data.error);
-          }
-      } catch (e) {
-          alert("Ошибка соединения с сервером.");
-      } finally {
-          setIsProcessingTx(false);
-      }
-  };
-
-  const openWithdrawModal = () => {
-      if (!isOwner) return;
-      setWithdrawIgn(member.ign || ''); // Pre-fill with linked IGN
-      setIsWithdrawMode(true);
-  };
-
-  const handleAdminManage = async (type: 'ADMIN_ADD' | 'ADMIN_REMOVE') => {
-      if (!isAdmin) return;
-      setIsProcessingTx(true);
-      try {
-          const res = await fetch(`${API_BASE_URL}/api/economy/admin/manage`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                  adminId: currentUser.id,
-                  targetUserId: member.user.id,
-                  amount: adminAmount,
-                  type
-              })
+              body: JSON.stringify({ userId: member.user.id, amount: withdrawAmount, ign: withdrawIgn.trim() })
           });
           if (res.ok) {
-              setAdminAmount('');
-              fetchEconomy(member.user.id);
-          } else {
-              const d = await res.json();
-              alert(d.error);
-          }
-      } catch (e) {
-          alert("Ошибка");
-      } finally {
-          setIsProcessingTx(false);
-      }
+              setWithdrawAmount(''); setIsWithdrawMode(false); fetchEconomy(member.user.id);
+              alert("Заявка на вывод создана!");
+          } else { alert((await res.json()).error); }
+      } catch (e) { alert("Ошибка сервера"); } 
+      finally { setIsProcessingTx(false); }
   };
 
-  const handleAdminForceWithdraw = async () => {
-      if (!isAdmin) return;
-      if (!member.ign) {
-          alert("У пользователя не привязан ник!");
-          return;
-      }
-      setIsProcessingTx(true);
-      try {
-          const res = await fetch(`${API_BASE_URL}/api/economy/admin/withdraw`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                  adminId: currentUser.id,
-                  targetUserId: member.user.id,
-                  amount: adminAmount,
-                  ign: member.ign
-              })
-          });
-          if (res.ok) {
-              setAdminAmount('');
-              fetchEconomy(member.user.id);
-              alert("Средства выведены на сервер!");
-          } else {
-              const d = await res.json();
-              alert(d.error);
-          }
-      } catch(e) {
-          alert("Ошибка");
-      } finally {
-          setIsProcessingTx(false);
-      }
-  };
-
-  const canEditIgn = ALLOWED_ADMIN_IDS.includes(currentUser.id);
-  const roleDef = ROLE_HIERARCHY.find(r => member.roles.includes(r.id));
-
-  // URL для головы
-  const getHeadUrl = () => {
-     if (member.ign) return `https://minotar.net/helm/${member.ign}/100.png`;
-     if (member.user.avatar) return `https://cdn.discordapp.com/avatars/${member.user.id}/${member.user.avatar}.png?size=100`;
-     return `https://cdn.discordapp.com/embed/avatars/${(parseInt(member.user.discriminator) || 0) % 5}.png`;
-  };
-
+  // IGN Update
   const handleSaveIgn = async () => {
-    if (!canEditIgn) return;
+    if (!isAdmin) return;
     setIsSaving(true);
     try {
         await updateMemberIgn(member.user.id, ignInput);
-        if (ignInput) setDisplayedName(ignInput);
-        else setDisplayedName(member.nick || member.user.global_name || member.user.username);
-        onUpdate(); 
-    } catch (e) {
-        alert("Ошибка сохранения ника.");
-    } finally {
-        setIsSaving(false);
-    }
+        onUpdate();
+        alert("Ник обновлен");
+    } catch (e) { alert("Ошибка"); } 
+    finally { setIsSaving(false); }
   };
 
-  // Фильтрация данных статистики
-  const filterByTime = (items: any[], dateField: string) => {
-      if (timeFilter === 'ALL') return items;
-      const now = Date.now();
-      const oneDay = 24 * 60 * 60 * 1000;
-      return items.filter(item => {
-          const itemTime = parseInt(item[dateField]);
-          if (timeFilter === 'DAY') return (now - itemTime) <= oneDay;
-          if (timeFilter === 'WEEK') return (now - itemTime) <= (oneDay * 7);
-          if (timeFilter === 'MONTH') return (now - itemTime) <= (oneDay * 30);
-          return true;
-      });
-  };
+  const roleDef = ROLE_HIERARCHY.find(r => member.roles.includes(r.id));
+  const headUrl = member.ign ? `https://minotar.net/helm/${member.ign}/100.png` : (member.user.avatar ? `https://cdn.discordapp.com/avatars/${member.user.id}/${member.user.avatar}.png` : '');
 
-  const filteredBans = stats ? filterByTime(stats.bans, 'time') : [];
-  const filteredMutes = stats ? filterByTime(stats.mutes, 'time') : [];
-  const filteredChecks = stats ? filterByTime(stats.checks, 'date') : [];
-
-  const allActions = [
-      ...filteredBans.map(b => ({ ...b, type: 'BAN', sortTime: b.time })),
-      ...filteredMutes.map(m => ({ ...m, type: 'MUTE', sortTime: m.time })),
-      ...filteredChecks.map(c => ({ ...c, type: 'CHECK', sortTime: c.date }))
-  ].sort((a, b) => b.sortTime - a.sortTime);
-
-  const displayedActions = statSubTab === 'ALL' ? allActions : 
-                           statSubTab === 'BANS' ? filteredBans.map(b => ({...b, type: 'BAN'})) :
-                           statSubTab === 'MUTES' ? filteredMutes.map(m => ({...m, type: 'MUTE'})) :
-                           filteredChecks.map(c => ({...c, type: 'CHECK'}));
+  // Prepare punishment history for display
+  const history = stats ? [
+      ...stats.bans.map(b => ({...b, type: 'BAN', sort: b.time})),
+      ...stats.mutes.map(m => ({...m, type: 'MUTE', sort: m.time}))
+  ].sort((a,b) => b.sort - a.sort) : [];
 
   return (
-    <div className="min-h-screen bg-[#020202] flex items-center justify-center p-4 relative overflow-hidden">
+    <div className="min-h-screen bg-[#020202] text-white font-sans p-6 flex flex-col items-center">
         
-        {/* --- Background Effects --- */}
-        <div className="absolute inset-0 bg-noise opacity-30 pointer-events-none"></div>
-        <div className="fixed top-0 left-0 w-full h-[300px] bg-purple-900/10 blur-[100px] pointer-events-none"></div>
+        {/* --- HEADER CARD --- */}
+        <div className="w-full max-w-6xl bg-[#0A0A0A] rounded-3xl border border-white/5 p-6 flex flex-col md:flex-row items-start md:items-center gap-6 mb-8 shadow-2xl relative overflow-hidden">
+            {/* Glow */}
+            <div className="absolute top-0 right-0 w-64 h-64 bg-purple-900/10 blur-[100px] pointer-events-none"></div>
 
-        {/* --- FULL SCREEN CONTAINER --- */}
-        <div className="w-full max-w-[95%] h-[90vh] relative z-10 animate-fade-in flex flex-col">
-            
-            {/* Header Navigation */}
-            <div className="flex justify-between items-center mb-6">
-                <ModernButton onClick={onBack} variant="secondary" className="pl-4 pr-5 shadow-lg backdrop-blur-md">
-                   <span className="text-gray-400 mr-2">←</span> Назад
-                </ModernButton>
-                
-                {/* TABS */}
-                <div className="flex bg-white/5 p-1 rounded-xl border border-white/5 backdrop-blur-md">
-                    <button 
-                        onClick={() => setActiveTab('PROFILE')}
-                        className={`px-6 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${activeTab === 'PROFILE' ? 'bg-purple-600 text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}
-                    >
-                        Профиль
-                    </button>
-                    <button 
-                         onClick={() => setActiveTab('STATS')}
-                         disabled={!member.ign}
-                         className={`px-6 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${activeTab === 'STATS' ? 'bg-purple-600 text-white shadow-lg' : 'text-gray-500 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed'}`}
-                    >
-                        Статистика
-                    </button>
-                    <button 
-                         onClick={() => setActiveTab('SALARY')}
-                         className={`px-6 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${activeTab === 'SALARY' ? 'bg-purple-600 text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}
-                    >
-                        Зарплата
-                    </button>
+            {/* Avatar Box */}
+            <div className="relative shrink-0">
+                <div className="w-32 h-32 rounded-2xl bg-[#151515] border border-white/10 overflow-hidden flex items-center justify-center shadow-lg">
+                    {headUrl ? (
+                        <img src={headUrl} alt="Avatar" className="w-full h-full object-cover rendering-pixelated" style={{imageRendering: 'pixelated'}} />
+                    ) : (
+                        <div className="text-gray-600 text-xs">No Skin</div>
+                    )}
                 </div>
             </div>
 
-            {/* CONTENT AREA */}
-            <div className="glass-panel rounded-3xl flex-1 overflow-hidden border border-white/10 shadow-[0_0_50px_rgba(0,0,0,0.5)] relative flex flex-col">
-                 
-                 {activeTab === 'PROFILE' && (
-                     /* === PROFILE TAB === */
-                     <div className="flex-1 overflow-y-auto flex flex-col lg:flex-row">
-                        
-                        {/* LEFT COLUMN: INFO */}
-                        <div className="w-full lg:w-1/2 p-8 lg:p-12 flex flex-col gap-8 relative z-20">
-                            
-                            {/* Header Info */}
-                            <div className="flex items-start gap-6">
-                                <div className="relative group">
-                                    <div className={`absolute -inset-1 bg-gradient-to-br ${roleDef?.color || 'from-gray-700 to-gray-600'} rounded-2xl blur opacity-40 group-hover:opacity-60 transition duration-500`}></div>
-                                    <img src={getHeadUrl()} alt="Head" className="relative w-24 h-24 rounded-xl border border-white/10 shadow-2xl bg-[#121212]" />
-                                </div>
-                                <div>
-                                    <h1 className="text-4xl font-black text-white tracking-tight mb-2">{displayedName}</h1>
-                                    <div className="flex flex-wrap items-center gap-3">
-                                        <span className="text-sm text-gray-400 font-mono bg-white/5 px-2 py-1 rounded">@{member.user.username}</span>
-                                        {roleDef && (
-                                            <span className={`text-[10px] uppercase font-bold tracking-widest px-3 py-1 rounded-full border bg-opacity-20 ${roleDef.badgeBg}`}>
-                                                {roleDef.name}
-                                            </span>
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
+            {/* User Info */}
+            <div className="flex-1 flex flex-col gap-3">
+                <div className="flex items-center gap-3">
+                    <h1 className="text-4xl font-black uppercase tracking-tighter">{displayedName}</h1>
+                    <span className="bg-white/5 text-gray-400 px-2 py-1 rounded text-[10px] font-mono border border-white/5">
+                        @{member.user.username}
+                    </span>
+                </div>
+                
+                {/* Role & Status */}
+                <div className="flex flex-wrap items-center gap-2">
+                    {roleDef && (
+                        <span className={`px-3 py-1 rounded text-[10px] font-bold uppercase tracking-wider ${roleDef.badgeBg.replace('bg-opacity-20', 'bg-opacity-10')}`}>
+                            {roleDef.name}
+                        </span>
+                    )}
+                    <span className="px-3 py-1 rounded bg-white/5 border border-white/5 text-gray-400 text-[10px] font-bold uppercase tracking-wider flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 rounded-full bg-gray-500"></span> OFFLINE
+                    </span>
+                </div>
 
-                            <div className="h-px w-full bg-gradient-to-r from-white/10 to-transparent"></div>
-
-                            {/* Playtime Card */}
-                            <div className="glass-card p-6 rounded-2xl border-l-4 border-l-emerald-500 relative overflow-hidden">
-                                <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 blur-[50px] pointer-events-none"></div>
-                                <h3 className="text-emerald-400 font-bold uppercase tracking-widest text-xs mb-2 flex items-center gap-2">
-                                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                                     Наигранное время
-                                </h3>
-                                <div className="flex items-baseline gap-3">
-                                    {loadingStats ? (
-                                        <div className="h-10 w-32 bg-white/5 rounded animate-pulse"></div>
-                                    ) : (
-                                        <>
-                                            <span className="text-6xl font-black text-white tracking-tighter">{stats?.playtime || 0}</span>
-                                            <span className="text-xl text-gray-500 font-bold">ЧАСОВ</span>
-                                        </>
-                                    )}
-                                </div>
-                                <p className="text-gray-500 text-xs mt-2">Общая активность на сервере</p>
-                            </div>
-
-                             {/* Minecraft Link Config */}
-                             <div className="bg-white/[0.02] rounded-2xl border border-white/5 p-6 backdrop-blur-sm shadow-inner">
-                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-[0.2em] mb-4">Привязка Minecraft</label>
-                                <div className="flex gap-3 items-center">
-                                    <input 
-                                        type="text" 
-                                        value={ignInput}
-                                        disabled={!canEditIgn}
-                                        onChange={(e) => setIgnInput(e.target.value)}
-                                        placeholder={canEditIgn ? "Введите ник..." : "Не привязан"}
-                                        className="glass-input flex-1 h-12 rounded-lg px-4 text-sm font-mono placeholder-gray-600 disabled:opacity-50 border-white/10 bg-black/20"
-                                    />
-                                    {canEditIgn && (
-                                        <ModernButton onClick={handleSaveIgn} isLoading={isSaving} className="h-12 px-6">
-                                            Сохранить
-                                        </ModernButton>
-                                    )}
-                                </div>
-                            </div>
-
-                        </div>
-
-                        {/* RIGHT COLUMN: 3D SKIN VIEWER / FALLBACK */}
-                        <div className="w-full lg:w-1/2 relative bg-gradient-to-b from-[#0a0a0a] to-[#050505] lg:bg-none flex flex-col items-center justify-center min-h-[400px]">
-                             <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[300px] bg-gradient-to-tr ${roleDef?.color || 'from-purple-500 to-blue-500'} blur-[120px] opacity-20 pointer-events-none`}></div>
-                             
-                             <div className="relative z-10 flex flex-col items-center justify-center h-full w-full">
-                                {member.ign ? (
-                                    <>
-                                        {/* Fallback to 2D if Error or toggled */}
-                                        {is3DLoadError ? (
-                                            <div className="relative group animate-fade-in">
-                                                 <div className={`absolute -inset-4 bg-gradient-to-b ${roleDef?.color || 'from-purple-500 to-blue-500'} opacity-20 blur-xl rounded-full`}></div>
-                                                 <img 
-                                                     src={`https://mc-heads.net/body/${member.ign}/400`} 
-                                                     alt={member.ign} 
-                                                     className="relative h-[400px] w-auto object-contain drop-shadow-2xl"
-                                                     onError={(e) => {
-                                                         (e.target as HTMLImageElement).src = `https://minotar.net/armor/body/${member.ign}/400.png`;
-                                                     }}
-                                                 />
-                                            </div>
-                                        ) : (
-                                            <canvas ref={canvasRef} className="cursor-grab active:cursor-grabbing animate-fade-in" />
-                                        )}
-
-                                        {/* Controls */}
-                                        <div className="absolute bottom-8 flex items-center gap-2 p-2 bg-black/40 backdrop-blur-md rounded-xl border border-white/10">
-                                            {!is3DLoadError && (
-                                                <button 
-                                                    onClick={() => setAutoRotate(!autoRotate)} 
-                                                    className={`p-2 rounded-lg transition-colors ${autoRotate ? 'bg-purple-500/20 text-purple-300' : 'hover:bg-white/10 text-gray-400'}`}
-                                                    title="Авто-вращение"
-                                                >
-                                                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
-                                                </button>
-                                            )}
-                                            
-                                            <button 
-                                                onClick={() => setIs3DLoadError(!is3DLoadError)} 
-                                                className={`p-2 rounded-lg hover:bg-white/10 ${is3DLoadError ? 'text-purple-400 bg-purple-500/10' : 'text-gray-400'}`}
-                                                title={is3DLoadError ? "Попробовать 3D" : "Переключить на 2D"}
-                                            >
-                                                <span className="text-xs font-bold">{is3DLoadError ? "3D" : "2D"}</span>
-                                            </button>
-                                        </div>
-                                    </>
-                                ) : (
-                                    <div className="text-gray-600 font-mono text-sm border border-white/5 p-4 rounded-xl flex items-center gap-2">
-                                        <span>Скин недоступен (нет ника)</span>
-                                    </div>
-                                )}
-                             </div>
-                        </div>
-                     </div>
-                 )}
-
-                 {activeTab === 'STATS' && (
-                    <div className="flex-1 overflow-hidden flex flex-col bg-[#0a0a0a]/50">
-                        {loadingStats ? (
-                            <div className="flex flex-1 items-center justify-center">
-                                <div className="w-10 h-10 border-4 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
-                            </div>
-                        ) : stats ? (
-                            <div className="flex flex-col h-full w-full">
-                                
-                                {/* 1. KPI Cards (NEW REDESIGNED) */}
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 p-8 pb-0">
-                                    
-                                    {/* BANS CARD */}
-                                    <div className="glass-card p-6 rounded-2xl border border-red-500/10 hover:border-red-500/30 group transition-all flex items-center justify-between">
-                                        {/* Left: Huge Icon */}
-                                        <div className="text-red-500/20 group-hover:text-red-500/30 transition-colors">
-                                           <svg className="w-16 h-16" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 11H7v-2h10v2z"/></svg>
-                                        </div>
-                                        {/* Right: Info */}
-                                        <div className="flex flex-col items-end h-full justify-between py-1">
-                                            <span className="text-xs font-bold text-red-500 tracking-[0.2em]">BANS</span>
-                                            <span className="text-5xl font-black text-white tracking-tighter drop-shadow-lg">{stats.bans.length}</span>
-                                        </div>
-                                    </div>
-
-                                    {/* MUTES CARD */}
-                                    <div className="glass-card p-6 rounded-2xl border border-orange-500/10 hover:border-orange-500/30 group transition-all flex items-center justify-between">
-                                        {/* Left: Huge Icon */}
-                                        <div className="text-orange-500/20 group-hover:text-orange-500/30 transition-colors">
-                                            <svg className="w-16 h-16" fill="currentColor" viewBox="0 0 24 24"><path d="M7 11v2h10v-2H7zm5-9C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/></svg>
-                                        </div>
-                                        {/* Right: Info */}
-                                        <div className="flex flex-col items-end h-full justify-between py-1">
-                                            <span className="text-xs font-bold text-orange-500 tracking-[0.2em]">MUTES</span>
-                                            <span className="text-5xl font-black text-white tracking-tighter drop-shadow-lg">{stats.mutes.length}</span>
-                                        </div>
-                                    </div>
-
-                                    {/* CHECKS CARD */}
-                                    <div className="glass-card p-6 rounded-2xl border border-blue-500/10 hover:border-blue-500/30 group transition-all flex items-center justify-between">
-                                        {/* Left: Huge Icon */}
-                                        <div className="text-blue-500/20 group-hover:text-blue-500/30 transition-colors">
-                                            <svg className="w-16 h-16" fill="currentColor" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
-                                        </div>
-                                        {/* Right: Info */}
-                                        <div className="flex flex-col items-end h-full justify-between py-1">
-                                            <span className="text-xs font-bold text-blue-500 tracking-[0.2em]">CHECKS</span>
-                                            <span className="text-5xl font-black text-white tracking-tighter drop-shadow-lg">{stats.checks.length}</span>
-                                        </div>
-                                    </div>
-
-                                </div>
-
-                                {/* 2. Filters */}
-                                <div className="px-8 py-6 flex flex-col md:flex-row gap-4 items-center justify-between">
-                                    <div className="bg-black/40 p-1.5 rounded-xl border border-white/10 backdrop-blur-md flex gap-1 w-full md:w-auto">
-                                        {(['ALL', 'BANS', 'MUTES', 'CHECKS'] as const).map((tab) => (
-                                            <button
-                                                key={tab}
-                                                onClick={() => setStatSubTab(tab)}
-                                                className={`px-4 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all ${statSubTab === tab ? 'bg-white/10 text-white shadow-sm' : 'text-gray-500 hover:text-gray-300'}`}
-                                            >
-                                                {tab === 'ALL' ? 'Все' : tab === 'BANS' ? 'Баны' : tab === 'MUTES' ? 'Муты' : 'Проверки'}
-                                            </button>
-                                        ))}
-                                    </div>
-                                    
-                                    <select 
-                                        value={timeFilter}
-                                        onChange={(e) => setTimeFilter(e.target.value as TimeFilter)}
-                                        className="bg-black/40 text-gray-300 text-xs font-bold uppercase rounded-xl px-4 py-3 border border-white/10 outline-none focus:border-purple-500 cursor-pointer hover:bg-black/60 transition-colors w-full md:w-auto"
-                                    >
-                                        <option value="ALL">За все время</option>
-                                        <option value="DAY">За 24 часа</option>
-                                        <option value="WEEK">За неделю</option>
-                                        <option value="MONTH">За месяц</option>
-                                    </select>
-                                </div>
-
-                                {/* 3. Grid */}
-                                <div className="flex-1 overflow-y-auto px-8 pb-8 custom-scrollbar">
-                                    {displayedActions.length === 0 ? (
-                                        <div className="flex flex-col items-center justify-center h-40 text-gray-600 border-2 border-dashed border-white/5 rounded-2xl">
-                                            <span className="text-xs uppercase tracking-widest font-bold">Активности не найдено</span>
-                                        </div>
-                                    ) : (
-                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                                            {displayedActions.map((item: any, idx) => {
-                                                let typeColor = 'gray';
-                                                let typeIcon = null;
-                                                let typeLabel = '';
-                                                
-                                                if (item.type === 'BAN') {
-                                                    typeColor = 'red';
-                                                    typeLabel = 'Блокировка';
-                                                    typeIcon = <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" /></svg>;
-                                                } else if (item.type === 'MUTE') {
-                                                    typeColor = 'orange';
-                                                    typeLabel = 'Мут чата';
-                                                    typeIcon = <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" /></svg>;
-                                                } else {
-                                                    typeColor = 'blue';
-                                                    typeLabel = 'Проверка';
-                                                    typeIcon = <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" /></svg>;
-                                                }
-
-                                                const borderColor = typeColor === 'red' ? 'border-red-500/20' : typeColor === 'orange' ? 'border-orange-500/20' : 'border-blue-500/20';
-                                                const bgHover = typeColor === 'red' ? 'hover:bg-red-500/5' : typeColor === 'orange' ? 'hover:bg-orange-500/5' : 'hover:bg-blue-500/5';
-                                                const iconBg = typeColor === 'red' ? 'bg-red-500/10 text-red-400' : typeColor === 'orange' ? 'bg-orange-500/10 text-orange-400' : 'bg-blue-500/10 text-blue-400';
-
-                                                return (
-                                                    <div key={idx} className={`glass-card p-4 rounded-xl border ${borderColor} ${bgHover} flex flex-col gap-3 group animate-slide-up relative overflow-hidden`}>
-                                                        <div className="flex justify-between items-start">
-                                                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${iconBg}`}>
-                                                                {typeIcon}
-                                                            </div>
-                                                            {item.active !== undefined && (
-                                                                <span className={`text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded ${item.active ? 'bg-emerald-500/20 text-emerald-400' : 'bg-gray-500/20 text-gray-500'}`}>
-                                                                    {item.active ? 'АКТИВЕН' : 'ИСТЕК'}
-                                                                </span>
-                                                            )}
-                                                        </div>
-                                                        <div>
-                                                            <div className="text-[10px] text-gray-500 uppercase font-bold tracking-wider mb-1">{typeLabel}</div>
-                                                            {item.type === 'CHECK' ? (
-                                                                <div className="text-white font-bold truncate" title={item.target}>{item.target}</div>
-                                                            ) : (
-                                                                <div className="text-white font-bold line-clamp-2 text-sm" title={item.reason}>{item.reason}</div>
-                                                            )}
-                                                        </div>
-                                                        <div className="mt-auto pt-3 border-t border-white/5 flex items-center gap-2">
-                                                            <svg className="w-3 h-3 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                                                            <span className="text-[10px] text-gray-500 font-mono">
-                                                                {formatDate(item.sortTime)}
-                                                            </span>
-                                                        </div>
-                                                        {item.type === 'CHECK' && (
-                                                            <div className={`absolute top-4 right-4 text-[9px] font-bold px-1.5 py-0.5 rounded border ${item.type.includes('Anydesk') ? 'border-red-500/30 text-red-400' : 'border-blue-500/30 text-blue-400'}`}>
-                                                                {item.type}
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        ) : (
-                            <div className="text-center text-gray-500 mt-20">Не удалось загрузить статистику.</div>
-                        )}
+                {/* Meta Data Row */}
+                <div className="flex flex-wrap items-center gap-2 mt-1">
+                    <div className="bg-[#111] px-3 py-1.5 rounded border border-white/5 text-[10px] text-gray-500 font-mono flex items-center gap-2">
+                        ID: <span className="text-gray-300">{member.user.id}</span>
                     </div>
-                 )}
-
-                {activeTab === 'SALARY' && (
-                    /* === SALARY TAB (REDESIGNED) === */
-                    <div className="flex-1 overflow-y-auto flex flex-col p-8 bg-[#0a0a0a]/50 custom-scrollbar">
-                         {loadingEconomy ? (
-                            <div className="flex flex-1 items-center justify-center w-full">
-                                <div className="w-10 h-10 border-4 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
-                            </div>
-                         ) : economy ? (
-                             <div className="flex flex-col gap-6 w-full max-w-6xl mx-auto">
-                                
-                                {/* 1. BANNER: WIDE GRADIENT CARD */}
-                                <div className="w-full rounded-3xl bg-gradient-to-r from-cyan-500 via-blue-500 to-purple-600 p-8 text-center relative overflow-hidden shadow-[0_10px_40px_rgba(59,130,246,0.3)] shrink-0">
-                                    {/* Noise/Texture overlay */}
-                                    <div className="absolute inset-0 bg-white/5 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-overlay"></div>
-                                    
-                                    <div className="relative z-10 flex flex-col items-center justify-center">
-                                        <div className="text-white/80 font-medium text-xs tracking-[0.2em] uppercase mb-2">Ваш баланс</div>
-                                        <div className="text-6xl md:text-7xl font-black text-white tracking-tighter drop-shadow-xl mb-6">
-                                            {economy.balance.toLocaleString()} 
-                                            <span className="text-2xl ml-2 font-bold opacity-70 align-top">AMT</span>
-                                        </div>
-
-                                        {/* Withdraw Button (Triggers Modal) */}
-                                        <div className="h-14 flex items-center justify-center">
-                                            <button 
-                                                onClick={openWithdrawModal}
-                                                disabled={!isOwner}
-                                                className="bg-black/20 hover:bg-black/30 text-white border border-white/20 px-8 py-3 rounded-xl font-bold uppercase tracking-wider text-sm transition-all backdrop-blur-sm hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
-                                            >
-                                                Вывести средства
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* 2. ADMIN TOOLS (DISCRETE PANEL) */}
-                                {isAdmin && (
-                                    <div className="w-full glass-panel rounded-xl p-4 flex flex-col md:flex-row items-center gap-4 justify-between border border-white/5 animate-fade-in">
-                                        <div className="flex items-center gap-2 text-xs font-bold text-gray-500 uppercase tracking-widest pl-2">
-                                            <span className="w-2 h-2 rounded-full bg-yellow-500"></span> Админ Панель
-                                        </div>
-                                        <div className="flex items-center gap-2 flex-1 justify-end">
-                                            <input 
-                                                type="number" 
-                                                value={adminAmount}
-                                                onChange={(e) => setAdminAmount(e.target.value)}
-                                                placeholder="Сумма..."
-                                                className="glass-input h-9 w-32 rounded-lg px-3 text-xs bg-black/40 border-white/5"
-                                            />
-                                            <button onClick={() => handleAdminManage('ADMIN_ADD')} className="h-9 px-4 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20 text-[10px] font-bold uppercase transition-all">
-                                                + Выдать
-                                            </button>
-                                            <button onClick={() => handleAdminManage('ADMIN_REMOVE')} className="h-9 px-4 rounded-lg bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 text-[10px] font-bold uppercase transition-all">
-                                                - Забрать
-                                            </button>
-                                            <button onClick={handleAdminForceWithdraw} className="h-9 px-4 rounded-lg bg-blue-500/10 text-blue-400 border border-blue-500/20 hover:bg-blue-500/20 text-[10px] font-bold uppercase transition-all">
-                                                Force Withdraw
-                                            </button>
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* 3. SPLIT HISTORY: WITHDRAWALS (LEFT) vs INCOME (RIGHT) */}
-                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-4">
-                                    
-                                    {/* --- WITHDRAWALS HISTORY --- */}
-                                    <div className="flex flex-col gap-4">
-                                        <h3 className="text-white font-bold text-lg">История выводов</h3>
-                                        <div className="flex flex-col gap-2">
-                                            {economy.history.filter(tx => ['WITHDRAW', 'ADMIN_REMOVE'].includes(tx.type)).length === 0 ? (
-                                                 <div className="p-8 rounded-xl border border-white/5 bg-white/[0.02] text-center text-gray-600 text-xs uppercase tracking-widest">
-                                                     Выплат пока нет
-                                                     <p className="text-[10px] mt-2 normal-case text-gray-700">Для совершения выплаты вам необходимо минимум 5000 AMT</p>
-                                                 </div>
-                                            ) : (
-                                                economy.history.filter(tx => ['WITHDRAW', 'ADMIN_REMOVE'].includes(tx.type)).map(tx => (
-                                                    <div key={tx.id} className="p-4 rounded-xl bg-[#0f0f0f] border border-white/5 flex justify-between items-center group hover:bg-[#151515] transition-colors">
-                                                        <div>
-                                                            <div className="text-gray-300 text-sm font-bold mb-1">
-                                                                {tx.type === 'WITHDRAW' ? 'Вывод средств' : 'Списание (Admin)'}
-                                                            </div>
-                                                            <div className="text-[10px] text-gray-600 font-mono">
-                                                                {formatDate(tx.date)} • {tx.comment || 'N/A'}
-                                                            </div>
-                                                        </div>
-                                                        <div className="text-red-400 font-bold font-mono">
-                                                            -{tx.amount.toLocaleString()} AMT
-                                                        </div>
-                                                    </div>
-                                                ))
-                                            )}
-                                        </div>
-                                    </div>
-
-                                    {/* --- INCOME HISTORY --- */}
-                                    <div className="flex flex-col gap-4">
-                                        <h3 className="text-white font-bold text-lg">История доходов</h3>
-                                        <div className="flex flex-col gap-2">
-                                            {economy.history.filter(tx => ['DEPOSIT', 'ADMIN_ADD', 'AUTO_SALARY'].includes(tx.type)).length === 0 ? (
-                                                 <div className="p-8 rounded-xl border border-white/5 bg-white/[0.02] text-center text-gray-600 text-xs uppercase tracking-widest">
-                                                     Доходов пока нет
-                                                 </div>
-                                            ) : (
-                                                economy.history.filter(tx => ['DEPOSIT', 'ADMIN_ADD', 'AUTO_SALARY'].includes(tx.type)).map(tx => (
-                                                    <div key={tx.id} className="p-4 rounded-xl bg-[#0f0f0f] border border-white/5 flex justify-between items-center group hover:bg-[#151515] transition-colors">
-                                                        <div>
-                                                            <div className="text-gray-300 text-sm font-bold mb-1">
-                                                                {tx.type === 'AUTO_SALARY' ? 'Зарплата (Авто)' : tx.type === 'ADMIN_ADD' ? 'Зачисление (Admin)' : 'Пополнение'}
-                                                            </div>
-                                                            <div className="text-[10px] text-gray-600 font-mono">
-                                                                {formatDate(tx.date)} • {tx.comment || 'N/A'}
-                                                            </div>
-                                                        </div>
-                                                        <div className="text-emerald-400 font-bold font-mono">
-                                                            +{tx.amount.toLocaleString()} AMT
-                                                        </div>
-                                                    </div>
-                                                ))
-                                            )}
-                                        </div>
-                                    </div>
-
-                                </div>
-                             </div>
-                         ) : (
-                            <div className="text-center text-gray-500 m-auto">Не удалось загрузить данные кошелька.</div>
-                         )}
+                    <div className="bg-[#111] px-3 py-1.5 rounded border border-white/5 text-[10px] text-gray-500 font-mono flex items-center gap-2">
+                        ⚠ WARNS: <span className="text-white">0</span>
                     </div>
-                 )}
+                    {member.ign && (
+                        <div className="bg-[#111] px-3 py-1.5 rounded border border-white/5 text-[10px] text-gray-500 font-mono flex items-center gap-2">
+                            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 10l-2 1m0 0l-2-1m2 1v2.5M20 7l-2 1m2-1l-2-1m2 1v2.5M14 4l-2-1-2 1M4 7l2-1M4 7l2 1M4 7v2.5M12 21l-2-1m2 1l2-1m-2 1v-2.5M6 18l-2-1v-2.5M18 18l2-1v-2.5" /></svg>
+                            IGN: <span className="text-white">{member.ign}</span>
+                        </div>
+                    )}
+                </div>
             </div>
-            
-            {/* --- WITHDRAW MODAL --- */}
-            {isWithdrawMode && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fade-in">
-                    <div className="bg-[#0f0f0f] border border-white/10 rounded-2xl p-6 w-full max-w-sm shadow-2xl relative">
-                        <button 
-                            onClick={() => setIsWithdrawMode(false)}
-                            className="absolute top-4 right-4 text-gray-500 hover:text-white transition-colors"
-                        >
-                            ✕
-                        </button>
-                        
-                        <h3 className="text-xl font-bold text-white mb-1">Вывод средств</h3>
-                        <p className="text-xs text-gray-500 mb-6">Заполните данные для перевода на сервер</p>
-                        
-                        <div className="space-y-4">
-                            <div>
-                                <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1.5 block">Никнейм</label>
-                                <input 
-                                    type="text" 
-                                    value={withdrawIgn}
-                                    onChange={(e) => setWithdrawIgn(e.target.value)}
-                                    placeholder="Ваш ник..."
-                                    className="glass-input w-full h-10 rounded-lg px-3 text-sm font-mono placeholder-gray-700 focus:border-purple-500 transition-colors"
-                                />
-                            </div>
-                            
-                            <div>
-                                <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1.5 block">Сумма (AMT)</label>
-                                <input 
-                                    type="number" 
-                                    value={withdrawAmount}
-                                    onChange={(e) => setWithdrawAmount(e.target.value)}
-                                    placeholder="5000"
-                                    className="glass-input w-full h-10 rounded-lg px-3 text-sm font-mono placeholder-gray-700 focus:border-purple-500 transition-colors"
-                                />
-                            </div>
 
-                            <div className="pt-2">
-                                <ModernButton 
-                                    onClick={handleWithdraw} 
-                                    isLoading={isProcessingTx} 
-                                    fullWidth 
-                                    className="h-10"
-                                >
-                                    Подтвердить вывод
-                                </ModernButton>
+            {/* Navigation Buttons */}
+            <div className="flex flex-row md:flex-col gap-2 self-stretch md:self-center justify-center">
+                 <button onClick={onBack} className="bg-[#151515] hover:bg-[#202020] text-gray-400 px-4 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest border border-white/5 transition-all">
+                    Назад
+                 </button>
+                 <div className="h-px w-full bg-white/5 my-1 hidden md:block"></div>
+                 <div className="flex gap-2 bg-[#111] p-1 rounded-lg border border-white/5">
+                     <button 
+                        onClick={() => setActiveTab('OVERVIEW')}
+                        className={`px-4 py-2 rounded-md text-[10px] font-bold uppercase tracking-widest transition-all ${activeTab === 'OVERVIEW' ? 'bg-white text-black shadow-lg' : 'text-gray-500 hover:text-white'}`}
+                     >
+                        Обзор
+                     </button>
+                     {/* RESTRICTED: Wallet only for Owner */}
+                     {isOwner && (
+                         <button 
+                            onClick={() => setActiveTab('WALLET')}
+                            className={`px-4 py-2 rounded-md text-[10px] font-bold uppercase tracking-widest transition-all ${activeTab === 'WALLET' ? 'bg-white text-black shadow-lg' : 'text-gray-500 hover:text-white'}`}
+                         >
+                            Кошелек
+                         </button>
+                     )}
+                     <button 
+                        onClick={() => setActiveTab('STATS')}
+                        className={`px-4 py-2 rounded-md text-[10px] font-bold uppercase tracking-widest transition-all ${activeTab === 'STATS' ? 'bg-white text-black shadow-lg' : 'text-gray-500 hover:text-white'}`}
+                     >
+                        Статистика
+                     </button>
+                 </div>
+            </div>
+        </div>
+
+        {/* --- MAIN CONTENT --- */}
+        <div className="w-full max-w-6xl animate-fade-in">
+            
+            {/* ================= STATS TAB ================= */}
+            {activeTab === 'STATS' && (
+                <div className="flex flex-col gap-8">
+                    {/* Header */}
+                    <div className="flex items-center gap-3">
+                        <div className="w-1 h-6 bg-purple-500 rounded-full shadow-[0_0_10px_#a855f7]"></div>
+                        <h2 className="text-xl font-bold uppercase tracking-widest">Статистика Сервера</h2>
+                        
+                        <div className="ml-auto flex gap-1 bg-[#111] p-1 rounded-lg border border-white/5">
+                            <span className="px-3 py-1 bg-white text-black rounded text-[10px] font-bold uppercase">Все время</span>
+                        </div>
+                    </div>
+
+                    {/* KPI Cards */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        {/* Bans */}
+                        <div className="bg-[#0A0A0A] border border-white/5 rounded-2xl p-6 relative overflow-hidden group hover:border-white/10 transition-colors">
+                            <div className="relative z-10">
+                                <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Всего банов</div>
+                                <div className="text-5xl font-black text-white">{stats?.bans.length || 0}</div>
+                                <div className="text-[9px] text-gray-600 font-mono mt-2">LITEBANS DB</div>
+                            </div>
+                            <div className="absolute top-1/2 right-4 -translate-y-1/2 text-[#151515] group-hover:text-[#1a1a1a] transition-colors">
+                                <svg className="w-24 h-24" fill="currentColor" viewBox="0 0 24 24"><path d="M19.424 19.424a1.875 1.875 0 11-2.651-2.651L19.424 19.424zM16.773 16.773a1.875 1.875 0 11-2.652-2.652L16.773 16.773zM14.121 14.121a1.875 1.875 0 11-2.651-2.651l2.651 2.651zM11.47 11.47a1.875 1.875 0 11-2.652-2.652L11.47 11.47zM3.818 9.879a1.875 1.875 0 010-2.652l5.303-5.303a1.875 1.875 0 012.652 0l7.954 7.954a1.875 1.875 0 010 2.652l-5.303 5.303a1.875 1.875 0 01-2.652 0L3.818 9.879z" /></svg>
                             </div>
                         </div>
+                        {/* Mutes */}
+                        <div className="bg-[#0A0A0A] border border-white/5 rounded-2xl p-6 relative overflow-hidden group hover:border-white/10 transition-colors">
+                             <div className="relative z-10">
+                                <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Всего мутов</div>
+                                <div className="text-5xl font-black text-white">{stats?.mutes.length || 0}</div>
+                                <div className="text-[9px] text-gray-600 font-mono mt-2">LITEBANS DB</div>
+                            </div>
+                            <div className="absolute top-1/2 right-4 -translate-y-1/2 text-[#151515] group-hover:text-[#1a1a1a] transition-colors">
+                                <svg className="w-24 h-24" fill="currentColor" viewBox="0 0 24 24"><path d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" /></svg>
+                            </div>
+                        </div>
+                        {/* Checks */}
+                        <div className="bg-[#0A0A0A] border border-white/5 rounded-2xl p-6 relative overflow-hidden group hover:border-white/10 transition-colors">
+                             <div className="relative z-10">
+                                <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Проверок</div>
+                                <div className="text-5xl font-black text-white">{stats?.checks.length || 0}</div>
+                                <div className="text-[9px] text-gray-600 font-mono mt-2">CHECKS DB</div>
+                            </div>
+                            <div className="absolute top-1/2 right-4 -translate-y-1/2 text-[#151515] group-hover:text-[#1a1a1a] transition-colors">
+                                <svg className="w-24 h-24" fill="currentColor" viewBox="0 0 24 24"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* History List */}
+                    <div className="flex flex-col gap-4 mt-4">
+                        <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">История наказаний</div>
+                        
+                        {history.length === 0 ? (
+                            <div className="p-8 text-center text-gray-600 border border-dashed border-white/5 rounded-xl">История пуста</div>
+                        ) : (
+                            history.map((item, idx) => (
+                                <div key={idx} className="bg-[#0D0D0D] border border-white/5 rounded-xl p-5 flex flex-col gap-2 relative group hover:border-white/10 transition-all">
+                                    <div className="flex items-center gap-3">
+                                        <div className={`p-2 rounded-lg ${item.type === 'BAN' ? 'bg-red-500/10 text-red-500' : 'bg-orange-500/10 text-orange-500'}`}>
+                                            {item.type === 'BAN' ? (
+                                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" /></svg>
+                                            ) : (
+                                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" clipRule="evenodd" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" /></svg>
+                                            )}
+                                        </div>
+                                        <div>
+                                            <div className="text-lg font-bold text-white">{item.reason || "Нет причины"}</div>
+                                            <div className="text-[10px] text-gray-500 font-mono">Выдан: {formatDate(item.time)}</div>
+                                        </div>
+                                    </div>
+                                    
+                                    {/* Badges Row */}
+                                    <div className="flex flex-wrap gap-2 mt-2">
+                                        <div className="bg-[#151515] border border-white/5 rounded px-2 py-1 flex items-center gap-2">
+                                            <svg className="w-3 h-3 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                            <span className="text-[10px] text-gray-400 font-mono">Срок: {getDurationString(item.time, item.until)}</span>
+                                        </div>
+                                        <div className="bg-[#151515] border border-white/5 rounded px-2 py-1 flex items-center gap-2">
+                                            <svg className="w-3 h-3 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                                            <span className="text-[10px] text-gray-400 font-mono">Истекает: {getExpiryDate(item.time, item.until)}</span>
+                                        </div>
+                                        {!item.active && (
+                                            <div className="bg-emerald-500/10 border border-emerald-500/20 rounded px-2 py-1 flex items-center gap-2">
+                                                <svg className="w-3 h-3 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                                                <span className="text-[10px] text-emerald-400 font-bold uppercase">Снят: {item.removed_by_name || "System"}</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            ))
+                        )}
                     </div>
                 </div>
             )}
+
+            {/* ================= WALLET TAB (RESTRICTED) ================= */}
+            {activeTab === 'WALLET' && isOwner && (
+                <div className="flex flex-col gap-6">
+                     <div className="w-full rounded-2xl bg-gradient-to-r from-purple-900 to-indigo-900 p-8 text-center relative overflow-hidden shadow-2xl">
+                        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-overlay"></div>
+                        <div className="relative z-10 flex flex-col items-center">
+                            <div className="text-white/60 text-[10px] font-bold uppercase tracking-[0.3em] mb-4">Текущий баланс</div>
+                            <div className="text-7xl font-black text-white tracking-tighter drop-shadow-xl mb-8">
+                                {economy?.balance.toLocaleString()} <span className="text-3xl opacity-50 font-medium">AMT</span>
+                            </div>
+                            <button 
+                                onClick={() => { setWithdrawIgn(member.ign || ''); setIsWithdrawMode(true); }}
+                                className="bg-white text-black px-8 py-3 rounded-xl text-xs font-black uppercase tracking-widest hover:scale-105 transition-transform shadow-[0_0_20px_rgba(255,255,255,0.3)]"
+                            >
+                                Вывести средства
+                            </button>
+                        </div>
+                     </div>
+
+                     {/* История транзакций */}
+                     <div className="bg-[#0A0A0A] border border-white/5 rounded-2xl p-6">
+                        <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-4">Последние операции</h3>
+                        <div className="flex flex-col gap-2">
+                            {economy?.history.length === 0 ? (
+                                <div className="text-gray-600 text-center py-4 text-xs">История пуста</div>
+                            ) : (
+                                economy?.history.map(tx => (
+                                    <div key={tx.id} className="flex justify-between items-center p-3 rounded-lg bg-[#111] border border-white/5">
+                                        <div className="flex flex-col">
+                                            <span className="text-white text-xs font-bold">{tx.comment || tx.type}</span>
+                                            <span className="text-[10px] text-gray-500 font-mono">{formatDate(tx.date)}</span>
+                                        </div>
+                                        <div className={`font-mono text-sm font-bold ${tx.amount > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                                            {tx.amount > 0 ? '+' : ''}{tx.amount}
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                     </div>
+                </div>
+            )}
+
+            {/* ================= OVERVIEW TAB ================= */}
+            {activeTab === 'OVERVIEW' && (
+                 <div className="flex flex-col md:flex-row gap-6">
+                     <div className="flex-1 bg-[#0A0A0A] border border-white/5 rounded-2xl p-6 flex flex-col justify-between">
+                         <div>
+                            <h3 className="text-xl font-bold text-white mb-2">Информация</h3>
+                            <div className="space-y-4 mt-6">
+                                <div>
+                                    <div className="text-[10px] text-gray-500 uppercase tracking-widest mb-1">Наигранное время</div>
+                                    <div className="text-3xl font-black text-white">{stats?.playtime || 0} <span className="text-sm font-medium text-gray-500">часов</span></div>
+                                </div>
+                                {isAdmin && (
+                                    <div className="pt-4 border-t border-white/5">
+                                        <div className="text-[10px] text-gray-500 uppercase tracking-widest mb-2">Управление Ником (Admin)</div>
+                                        <div className="flex gap-2">
+                                            <input 
+                                                className="glass-input h-8 px-3 rounded text-xs w-full bg-[#111]"
+                                                value={ignInput}
+                                                onChange={e => setIgnInput(e.target.value)}
+                                            />
+                                            <button onClick={handleSaveIgn} className="bg-white/10 px-3 rounded text-xs hover:bg-white/20">OK</button>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                         </div>
+                     </div>
+                     <div className="w-full md:w-[400px] h-[500px] bg-[#0A0A0A] border border-white/5 rounded-2xl relative flex items-center justify-center overflow-hidden">
+                         <div className="absolute inset-0 bg-gradient-to-b from-purple-900/20 to-transparent pointer-events-none"></div>
+                         <canvas ref={canvasRef} className="cursor-grab active:cursor-grabbing relative z-10" />
+                         <div className="absolute bottom-4 left-4 z-20">
+                             <button onClick={() => setAutoRotate(!autoRotate)} className="text-gray-500 hover:text-white text-[10px] font-bold uppercase bg-black/50 px-2 py-1 rounded backdrop-blur">
+                                {autoRotate ? 'Stop Rotate' : 'Rotate'}
+                             </button>
+                         </div>
+                     </div>
+                 </div>
+            )}
         </div>
+
+        {/* --- WITHDRAW MODAL --- */}
+        {isWithdrawMode && (
+             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fade-in">
+                <div className="bg-[#0f0f0f] border border-white/10 rounded-2xl p-6 w-full max-w-sm shadow-2xl relative">
+                    <button onClick={() => setIsWithdrawMode(false)} className="absolute top-4 right-4 text-gray-500 hover:text-white">✕</button>
+                    <h3 className="text-xl font-bold text-white mb-6">Вывод средств</h3>
+                    <div className="space-y-4">
+                        <div>
+                            <label className="text-[10px] font-bold text-gray-500 uppercase mb-1 block">Никнейм</label>
+                            <input type="text" value={withdrawIgn} onChange={(e) => setWithdrawIgn(e.target.value)} className="glass-input w-full h-10 rounded-lg px-3 text-sm font-mono" />
+                        </div>
+                        <div>
+                            <label className="text-[10px] font-bold text-gray-500 uppercase mb-1 block">Сумма (AMT)</label>
+                            <input type="number" value={withdrawAmount} onChange={(e) => setWithdrawAmount(e.target.value)} placeholder="Min 5000" className="glass-input w-full h-10 rounded-lg px-3 text-sm font-mono" />
+                        </div>
+                        <ModernButton onClick={handleWithdraw} isLoading={isProcessingTx} fullWidth className="h-10 mt-2">Подтвердить</ModernButton>
+                    </div>
+                </div>
+             </div>
+        )}
     </div>
   );
 };
