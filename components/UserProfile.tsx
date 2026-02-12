@@ -522,40 +522,48 @@ const UserProfile: React.FC<UserProfileProps> = ({ member, currentUser, onBack, 
                         ) : stats ? (
                             <div className="flex flex-col h-full w-full">
                                 
-                                {/* 1. KPI Cards */}
+                                {/* 1. KPI Cards (NEW REDESIGNED) */}
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 p-8 pb-0">
-                                    <div className="glass-card p-6 rounded-2xl border border-red-500/10 hover:border-red-500/30 group transition-all">
-                                        <div className="flex justify-between items-start mb-4">
-                                            <div className="p-3 rounded-xl bg-red-500/10 text-red-500 group-hover:bg-red-500/20 transition-colors">
-                                                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" /></svg>
-                                            </div>
-                                            <span className="text-xs font-bold text-red-400 bg-red-500/5 px-2 py-1 rounded">BANS</span>
+                                    
+                                    {/* BANS CARD */}
+                                    <div className="glass-card p-6 rounded-2xl border border-red-500/10 hover:border-red-500/30 group transition-all flex items-center justify-between">
+                                        {/* Left: Huge Icon */}
+                                        <div className="text-red-500/20 group-hover:text-red-500/30 transition-colors">
+                                           <svg className="w-20 h-20" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 11H7v-2h10v2z"/></svg>
                                         </div>
-                                        <div className="text-4xl font-black text-white mb-1">{stats.bans.length}</div>
-                                        <div className="text-xs text-gray-500 font-medium">Выданных блокировок</div>
+                                        {/* Right: Info */}
+                                        <div className="flex flex-col items-end">
+                                            <span className="text-xs font-bold text-red-500 tracking-[0.2em] mb-1">BANS</span>
+                                            <span className="text-5xl font-black text-white tracking-tighter drop-shadow-lg">{stats.bans.length}</span>
+                                        </div>
                                     </div>
 
-                                    <div className="glass-card p-6 rounded-2xl border border-orange-500/10 hover:border-orange-500/30 group transition-all">
-                                        <div className="flex justify-between items-start mb-4">
-                                            <div className="p-3 rounded-xl bg-orange-500/10 text-orange-500 group-hover:bg-orange-500/20 transition-colors">
-                                                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" /></svg>
-                                            </div>
-                                            <span className="text-xs font-bold text-orange-400 bg-orange-500/5 px-2 py-1 rounded">MUTES</span>
+                                    {/* MUTES CARD */}
+                                    <div className="glass-card p-6 rounded-2xl border border-orange-500/10 hover:border-orange-500/30 group transition-all flex items-center justify-between">
+                                        {/* Left: Huge Icon */}
+                                        <div className="text-orange-500/20 group-hover:text-orange-500/30 transition-colors">
+                                            <svg className="w-20 h-20" fill="currentColor" viewBox="0 0 24 24"><path d="M7 11v2h10v-2H7zm5-9C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/></svg>
                                         </div>
-                                        <div className="text-4xl font-black text-white mb-1">{stats.mutes.length}</div>
-                                        <div className="text-xs text-gray-500 font-medium">Выданных мутов</div>
+                                        {/* Right: Info */}
+                                        <div className="flex flex-col items-end">
+                                            <span className="text-xs font-bold text-orange-500 tracking-[0.2em] mb-1">MUTES</span>
+                                            <span className="text-5xl font-black text-white tracking-tighter drop-shadow-lg">{stats.mutes.length}</span>
+                                        </div>
                                     </div>
 
-                                    <div className="glass-card p-6 rounded-2xl border border-blue-500/10 hover:border-blue-500/30 group transition-all">
-                                        <div className="flex justify-between items-start mb-4">
-                                            <div className="p-3 rounded-xl bg-blue-500/10 text-blue-500 group-hover:bg-blue-500/20 transition-colors">
-                                                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                                            </div>
-                                            <span className="text-xs font-bold text-blue-400 bg-blue-500/5 px-2 py-1 rounded">CHECKS</span>
+                                    {/* CHECKS CARD */}
+                                    <div className="glass-card p-6 rounded-2xl border border-blue-500/10 hover:border-blue-500/30 group transition-all flex items-center justify-between">
+                                        {/* Left: Huge Icon */}
+                                        <div className="text-blue-500/20 group-hover:text-blue-500/30 transition-colors">
+                                            <svg className="w-20 h-20" fill="currentColor" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
                                         </div>
-                                        <div className="text-4xl font-black text-white mb-1">{stats.checks.length}</div>
-                                        <div className="text-xs text-gray-500 font-medium">Проведенных проверок</div>
+                                        {/* Right: Info */}
+                                        <div className="flex flex-col items-end">
+                                            <span className="text-xs font-bold text-blue-500 tracking-[0.2em] mb-1">CHECKS</span>
+                                            <span className="text-5xl font-black text-white tracking-tighter drop-shadow-lg">{stats.checks.length}</span>
+                                        </div>
                                     </div>
+
                                 </div>
 
                                 {/* 2. Filters */}

@@ -9,10 +9,10 @@ const PORT = process.env.PORT || 3001;
 app.use(cors());
 app.use(express.json());
 
-// КОНФИГУРАЦИЯ БОТА (Берем из переменных окружения)
+// КОНФИГУРАЦИЯ БОТА
 const TARGET_GUILD_ID = '1458138848822431770'; 
 const STAFF_ROLE_ID = '1458158245700046901';   
-const BOT_TOKEN = process.env.BOT_TOKEN; // <-- ТЕПЕРЬ БЕЗОПАСНО
+const BOT_TOKEN = process.env.BOT_TOKEN;
 
 // ID АДМИНИСТРАТОРОВ
 const ALLOWED_ADMIN_IDS = [
@@ -31,15 +31,21 @@ const SALARY_RATES = {
     CHECK: 350
 };
 
-// ДАТА НАЧАЛА ОТСЧЕТА (11.02.2026)
+// ВАЖНО: Исправлен год на 2025. Если у тебя на сервере реально 2026, поменяй обратно.
 const START_DATE_LIMIT = new Date('2026-02-11T00:00:00').getTime();
 
+// ПРОВЕРКА НАЛИЧИЯ ПАРОЛЕЙ (ДЛЯ ОТЛАДКИ В RENDER)
+if (!process.env.DB_PASSWORD || !process.env.DB_LOGS_PASSWORD) {
+    console.error("CRITICAL ERROR: Passwords not found in environment variables!");
+    console.error("DB_PASSWORD is: ", process.env.DB_PASSWORD ? "*****" : "MISSING");
+    console.error("DB_LOGS_PASSWORD is: ", process.env.DB_LOGS_PASSWORD ? "*****" : "MISSING");
+}
+
 // --- НАСТРОЙКА БАЗ ДАННЫХ ---
-// Используем process.env для паролей
 const dbLiteBans = mysql.createPool({
     host: process.env.DB_HOST || 'panel.nullx.space',
     user: process.env.DB_USER || 'u1_FAXro5fVCj',
-    password: process.env.DB_PASSWORD, // <-- БЕРЕТСЯ ИЗ НАСТРОЕК RENDER
+    password: process.env.DB_PASSWORD,
     database: 's1_litebans',
     waitForConnections: true,
     connectionLimit: 5,
@@ -50,7 +56,7 @@ const dbLogs = mysql.createPool({
     host: process.env.DB_LOGS_HOST || 'panel.nullx.space',
     port: 3306,
     user: process.env.DB_LOGS_USER || 'u1_McHWJLbCr4',
-    password: process.env.DB_LOGS_PASSWORD, // <-- БЕРЕТСЯ ИЗ НАСТРОЕК RENDER
+    password: process.env.DB_LOGS_PASSWORD,
     database: 's1_logs',
     waitForConnections: true,
     connectionLimit: 10,
@@ -62,7 +68,6 @@ const initDb = async () => {
     try {
         const connection = await dbLogs.getConnection();
         
-        // 1. Кошельки
         await connection.query(`
             CREATE TABLE IF NOT EXISTS staff_wallets (
                 discord_id VARCHAR(32) PRIMARY KEY,
@@ -70,7 +75,6 @@ const initDb = async () => {
             )
         `);
 
-        // 2. Транзакции
         await connection.query(`
             CREATE TABLE IF NOT EXISTS staff_transactions (
                 id VARCHAR(36) PRIMARY KEY,
@@ -84,7 +88,6 @@ const initDb = async () => {
             )
         `);
 
-        // 3. Профили (Связь Discord <-> IGN)
         await connection.query(`
             CREATE TABLE IF NOT EXISTS staff_profiles (
                 discord_id VARCHAR(32) PRIMARY KEY,
@@ -92,7 +95,6 @@ const initDb = async () => {
             )
         `);
 
-        // 4. Состояние системы (Для авто-зарплаты)
         await connection.query(`
             CREATE TABLE IF NOT EXISTS system_state (
                 service_key VARCHAR(50) PRIMARY KEY,
@@ -155,10 +157,11 @@ const startAutoSalaryService = async () => {
     
     let isProcessing = false;
 
-    // Инициализация
+    // Инициализация курсоров при старте
     const state = await getState();
     if (!state.lastBanId) {
         try {
+            // Ищем первый бан/мут после стартовой даты, чтобы начать отсчет
             const [firstBan] = await dbLiteBans.query('SELECT id FROM litebans_bans WHERE time >= ? ORDER BY id ASC LIMIT 1', [START_DATE_LIMIT]);
             const startBanId = firstBan.length > 0 ? firstBan[0].id - 1 : 0;
             await saveState('lastBanId', startBanId);
@@ -192,6 +195,7 @@ const startAutoSalaryService = async () => {
                     const adminIgn = ban.banned_by_name;
                     if (!adminIgn || ['Console','Anticheat','RCON'].includes(adminIgn)) continue;
                     
+                    // Проверка дубликатов транзакций
                     if (await checkTransactionExists(`%бан #${ban.id}%`)) continue;
 
                     const discordId = await getDiscordIdByIgn(adminIgn);
@@ -261,9 +265,12 @@ const startAutoSalaryService = async () => {
         }
     };
 
-    setInterval(checkNewEntries, 30000);
+    // Запускаем каждые 10 секунд (10000 мс)
+    setInterval(checkNewEntries, 10000);
     checkNewEntries();
 };
+// Запуск сервиса
+startAutoSalaryService();
 
 const checkTransactionExists = async (pattern) => {
     const [rows] = await dbLogs.query('SELECT id FROM staff_transactions WHERE comment LIKE ? LIMIT 1', [pattern]);
