@@ -33,7 +33,7 @@ const SALARY_RATES = {
 
 // ДАТА НАЧАЛА ОТСЧЕТА
 // Ставим 1 Февраля 2026, чтобы точно захватить данные со скриншота (08.02, 10.02)
-const START_DATE_LIMIT = new Date('2026-02-10T00:00:00').getTime();
+const START_DATE_LIMIT = new Date('2026-02-01T00:00:00').getTime();
 
 // ПРОВЕРКА НАЛИЧИЯ ПАРОЛЕЙ (ДЛЯ ОТЛАДКИ В RENDER)
 if (!process.env.DB_PASSWORD || !process.env.DB_LOGS_PASSWORD) {
