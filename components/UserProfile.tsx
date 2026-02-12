@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { GuildMember, DiscordUser, PlayerStats, EconomyData } from '../types';
 import { ROLE_HIERARCHY, ALLOWED_ADMIN_IDS, API_BASE_URL } from '../constants';
@@ -170,8 +171,9 @@ const UserProfile: React.FC<UserProfileProps> = ({ member, currentUser, onBack, 
       // Time Filter
       const now = Date.now();
       combined = combined.filter(item => {
-          if (timeFilter === 'DAY') return (now - item.time) <= 86400000;
-          if (timeFilter === 'WEEK') return (now - item.time) <= 604800000;
+          const t = Number(item.time);
+          if (timeFilter === 'DAY') return (now - t) <= 86400000;
+          if (timeFilter === 'WEEK') return (now - t) <= 604800000;
           return true;
       });
 
@@ -199,7 +201,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ member, currentUser, onBack, 
 
       const now = Date.now();
       return list.filter(item => {
-          const t = item.time || item.date;
+          const t = Number(item.time || item.date);
           if (timeFilter === 'DAY') return (now - t) <= 86400000;
           if (timeFilter === 'WEEK') return (now - t) <= 604800000;
           return true;

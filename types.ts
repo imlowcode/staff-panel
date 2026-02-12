@@ -1,3 +1,4 @@
+
 export interface DiscordUser {
   id: string;
   username: string;
@@ -48,7 +49,7 @@ export interface PlayerMute {
 }
 
 export interface PlayerCheck {
-  date: string;
+  date: number;
   admin: string;
   type: string; // Anydesk/Discord
   target: string;
