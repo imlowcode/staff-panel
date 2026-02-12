@@ -37,52 +37,48 @@ type TabType = 'OVERVIEW' | 'WALLET' | 'STATS';
 type TimeFilter = 'ALL' | 'WEEK' | 'DAY';
 type TypeFilter = 'ALL' | 'BAN' | 'MUTE' | 'CHECK';
 
-// --- NEW PREMIUM ICONS ---
+// --- HEROICONS SOLID SET ---
 const Icons = {
-    // Hammer Icon
-    Ban: () => (
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6">
-            <path fillRule="evenodd" d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25zM12.75 9a.75.75 0 00-1.5 0v2.25H9a.75.75 0 000 1.5h2.25V15a.75.75 0 001.5 0v-2.25H15a.75.75 0 000-1.5h-2.25V9z" clipRule="evenodd" />
+    // Nav: Overview (Squares2x2)
+    Overview: () => (
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
+            <path fillRule="evenodd" d="M3 6a3 3 0 013-3h2.25a3 3 0 013 3v2.25a3 3 0 01-3 3H6a3 3 0 01-3-3V6zm9.75 0a3 3 0 013-3H18a3 3 0 013 3v2.25a3 3 0 01-3 3h-2.25a3 3 0 01-3-3V6zM3 15.75a3 3 0 013-3h2.25a3 3 0 013 3V18a3 3 0 01-3 3H6a3 3 0 01-3-3v-2.25zm9.75 0a3 3 0 013-3H18a3 3 0 013 3V18a3 3 0 01-3 3h-2.25a3 3 0 01-3-3v-2.25z" clipRule="evenodd" />
         </svg>
     ),
-    // Gavel for Ban Stats
-    Gavel: () => (
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-full h-full">
-            <path fillRule="evenodd" d="M15.75 1.5a6.75 6.75 0 00-6.651 7.906c.067.39-.032.717-.221.906l-6.5 6.499a3 3 0 004.243 4.243l6.499-6.5c.189-.189.517-.288.906-.22a6.75 6.75 0 101.724-12.835zm0 13.5a6.74 6.74 0 01-2.812-.609l-4.713 4.713a1.5 1.5 0 01-2.121-2.121l4.713-4.713a6.75 6.75 0 114.933 2.729z" clipRule="evenodd" />
+    // Nav: Stats (ChartBar)
+    Stats: () => (
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
+            <path fillRule="evenodd" d="M3 6a3 3 0 013-3h2.25a3 3 0 013 3v2.25a3 3 0 01-3 3H6a3 3 0 01-3-3V6zm9.75 0a3 3 0 013-3H18a3 3 0 013 3v2.25a3 3 0 01-3 3h-2.25a3 3 0 01-3-3V6zM3 15.75a3 3 0 013-3h2.25a3 3 0 013 3V18a3 3 0 01-3 3H6a3 3 0 01-3-3v-2.25zm9.75 0a3 3 0 013-3H18a3 3 0 013 3V18a3 3 0 01-3 3h-2.25a3 3 0 01-3-3v-2.25z" clipRule="evenodd" />
         </svg>
     ),
-    // Mute Icon
-    Mute: () => (
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-full h-full">
-            <path d="M13.5 4.06c0-1.336-1.616-2.005-2.56-1.06l-4.5 4.5H4.508c-1.141 0-2.318.664-2.66 1.905A9.76 9.76 0 001.5 12c0 .898.121 1.768.35 2.595.341 1.24 1.518 1.905 2.659 1.905h1.93l4.5 4.5c.945.945 2.561.276 2.561-1.06V4.06zM18.53 9.22a.75.75 0 011.06 0c.27.27.41.64.41 1.03v3.5c0 .39-.14.76-.41 1.03a.75.75 0 11-1.06-1.06c.133-.134.202-.316.202-.5V10.25c0-.184-.07-.366-.202-.5a.75.75 0 010-1.06z" />
-            <path d="M21.364 7.106a.75.75 0 011.06 0 7.468 7.468 0 012.201 5.269c0 2.07-.84 3.946-2.201 5.269a.75.75 0 11-1.06-1.06 5.968 5.968 0 001.76-4.209 5.968 5.968 0 00-1.76-4.21.75.75 0 010-1.06z" />
-        </svg>
-    ),
-    // Check/Verify Icon
-    Check: () => (
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-full h-full">
-             <path fillRule="evenodd" d="M12 1.5a5.25 5.25 0 00-5.25 5.25v3a3 3 0 00-3 3v6.75a3 3 0 003 3h10.5a3 3 0 003-3v-6.75a3 3 0 00-3-3v-3c0-2.9-2.35-5.25-5.25-5.25zm3.75 8.25v-3a3.75 3.75 0 10-7.5 0v3h7.5z" clipRule="evenodd" />
-        </svg>
-    ),
-    // Document/Inspect Icon
-    Inspect: () => (
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-full h-full">
-            <path fillRule="evenodd" d="M7.5 6v.75H5.513c-.96 0-1.764.724-1.865 1.679l-1.263 12A1.875 1.875 0 004.25 22.5h15.5a1.875 1.875 0 001.865-2.071l-1.263-12a1.875 1.875 0 00-1.865-1.679H16.5V6a4.5 4.5 0 10-9 0zM12 3a3 3 0 00-3 3v.75h6V6a3 3 0 00-3-3zm-3 8.25a3 3 0 106 0v.75a3 3 0 10-6 0v-.75z" clipRule="evenodd" />
-        </svg>
-    ),
+    // Nav: Wallet (Wallet)
     Wallet: () => (
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
             <path d="M2.25 2.25a.75.75 0 000 1.5h1.386c.17 0 .318.114.362.278l2.558 9.592a3.752 3.752 0 00-2.806 3.63c0 .414.336.75.75.75h15.75a.75.75 0 000-1.5H5.378A2.25 2.25 0 017.5 15h11.218a.75.75 0 00.674-.421 60.358 60.358 0 002.96-7.228.75.75 0 00-.525-.965A60.864 60.864 0 005.68 4.509l-.232-.867A1.875 1.875 0 003.636 2.25H2.25zM3.75 20.25a1.5 1.5 0 113 0 1.5 1.5 0 01-3 0zM16.5 20.25a1.5 1.5 0 113 0 1.5 1.5 0 01-3 0z" />
         </svg>
     ),
-    Overview: () => (
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
-             <path fillRule="evenodd" d="M7.5 6a4.5 4.5 0 119 0 4.5 4.5 0 01-9 0zM3.751 20.105a8.25 8.25 0 0116.498 0 .75.75 0 01-.437.695A18.683 18.683 0 0112 22.5c-2.786 0-5.433-.608-7.812-1.7a.75.75 0 01-.437-.695z" clipRule="evenodd" />
+    // Stats: Ban (Gavel / Hammer) - Standard Gavel
+    Gavel: () => (
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-full h-full">
+           <path fillRule="evenodd" d="M15.75 2.25a6.75 6.75 0 00-6.65 7.9l-6.5 6.5a3 3 0 004.24 4.24l6.5-6.5a6.75 6.75 0 102.41-12.14zm-2.8 12.9l-4.72 4.71a1.5 1.5 0 01-2.12-2.12l4.71-4.72a6.74 6.74 0 012.13 2.13z" clipRule="evenodd" />
         </svg>
     ),
-    Stats: () => (
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
-            <path fillRule="evenodd" d="M3 6a3 3 0 013-3h2.25a3 3 0 013 3v2.25a3 3 0 01-3 3H6a3 3 0 01-3-3V6zm9.75 0a3 3 0 013-3H18a3 3 0 013 3v2.25a3 3 0 01-3 3h-2.25a3 3 0 01-3-3V6zM3 15.75a3 3 0 013-3h2.25a3 3 0 013 3V18a3 3 0 01-3 3H6a3 3 0 01-3-3v-2.25zm9.75 0a3 3 0 013-3H18a3 3 0 013 3V18a3 3 0 01-3 3h-2.25a3 3 0 01-3-3v-2.25z" clipRule="evenodd" />
+    // Stats: Mute (Speaker X)
+    Mute: () => (
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-full h-full">
+            <path d="M13.5 4.06c0-1.336-1.616-2.005-2.56-1.06l-4.5 4.5H4.508c-1.141 0-2.318.664-2.66 1.905A9.76 9.76 0 001.5 12c0 .898.121 1.768.35 2.595.341 1.24 1.518 1.905 2.659 1.905h1.93l4.5 4.5c.945.945 2.561.276 2.561-1.06V4.06zM17.78 9.22a.75.75 0 10-1.06 1.06L18.44 12l-1.72 1.72a.75.75 0 101.06 1.06l1.72-1.72 1.72 1.72a.75.75 0 101.06-1.06L20.56 12l1.72-1.72a.75.75 0 10-1.06-1.06l-1.72 1.72-1.72-1.72z" />
+        </svg>
+    ),
+    // Stats: Check (Clipboard Check)
+    Inspect: () => (
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-full h-full">
+            <path fillRule="evenodd" d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25zm4.53 7.22l-4.5 4.5a.75.75 0 01-1.06 0l-2.25-2.25a.75.75 0 011.06-1.06l1.72 1.72 3.97-3.97a.75.75 0 111.06 1.06z" clipRule="evenodd" />
+        </svg>
+    ),
+    // Small Icon for Feed: Ban (Gavel)
+    Ban: () => (
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6">
+           <path fillRule="evenodd" d="M15.75 2.25a6.75 6.75 0 00-6.65 7.9l-6.5 6.5a3 3 0 004.24 4.24l6.5-6.5a6.75 6.75 0 102.41-12.14zm-2.8 12.9l-4.72 4.71a1.5 1.5 0 01-2.12-2.12l4.71-4.72a6.74 6.74 0 012.13 2.13z" clipRule="evenodd" />
         </svg>
     )
 };
@@ -570,7 +566,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ member, currentUser, onBack, 
                                         'bg-blue-500/10 text-blue-500'
                                     }`}>
                                         <div className="w-6 h-6">
-                                            {item.type === 'BAN' ? <Icons.Ban /> : item.type === 'MUTE' ? <Icons.Mute /> : <Icons.Check />}
+                                            {item.type === 'BAN' ? <Icons.Ban /> : item.type === 'MUTE' ? <Icons.Mute /> : <Icons.Inspect />}
                                         </div>
                                     </div>
 
