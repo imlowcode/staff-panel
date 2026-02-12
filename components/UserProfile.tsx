@@ -529,11 +529,11 @@ const UserProfile: React.FC<UserProfileProps> = ({ member, currentUser, onBack, 
                                     <div className="glass-card p-6 rounded-2xl border border-red-500/10 hover:border-red-500/30 group transition-all flex items-center justify-between">
                                         {/* Left: Huge Icon */}
                                         <div className="text-red-500/20 group-hover:text-red-500/30 transition-colors">
-                                           <svg className="w-16 h-16" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 11H7v-2h10v2z"/></svg>
+                                           <svg className="w-20 h-20" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 11H7v-2h10v2z"/></svg>
                                         </div>
                                         {/* Right: Info */}
-                                        <div className="flex flex-col items-end h-full justify-between py-1">
-                                            <span className="text-xs font-bold text-red-500 tracking-[0.2em]">BANS</span>
+                                        <div className="flex flex-col items-end">
+                                            <span className="text-xs font-bold text-red-500 tracking-[0.2em] mb-1">BANS</span>
                                             <span className="text-5xl font-black text-white tracking-tighter drop-shadow-lg">{stats.bans.length}</span>
                                         </div>
                                     </div>
@@ -542,11 +542,11 @@ const UserProfile: React.FC<UserProfileProps> = ({ member, currentUser, onBack, 
                                     <div className="glass-card p-6 rounded-2xl border border-orange-500/10 hover:border-orange-500/30 group transition-all flex items-center justify-between">
                                         {/* Left: Huge Icon */}
                                         <div className="text-orange-500/20 group-hover:text-orange-500/30 transition-colors">
-                                            <svg className="w-16 h-16" fill="currentColor" viewBox="0 0 24 24"><path d="M7 11v2h10v-2H7zm5-9C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/></svg>
+                                            <svg className="w-20 h-20" fill="currentColor" viewBox="0 0 24 24"><path d="M7 11v2h10v-2H7zm5-9C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/></svg>
                                         </div>
                                         {/* Right: Info */}
-                                        <div className="flex flex-col items-end h-full justify-between py-1">
-                                            <span className="text-xs font-bold text-orange-500 tracking-[0.2em]">MUTES</span>
+                                        <div className="flex flex-col items-end">
+                                            <span className="text-xs font-bold text-orange-500 tracking-[0.2em] mb-1">MUTES</span>
                                             <span className="text-5xl font-black text-white tracking-tighter drop-shadow-lg">{stats.mutes.length}</span>
                                         </div>
                                     </div>
@@ -555,11 +555,11 @@ const UserProfile: React.FC<UserProfileProps> = ({ member, currentUser, onBack, 
                                     <div className="glass-card p-6 rounded-2xl border border-blue-500/10 hover:border-blue-500/30 group transition-all flex items-center justify-between">
                                         {/* Left: Huge Icon */}
                                         <div className="text-blue-500/20 group-hover:text-blue-500/30 transition-colors">
-                                            <svg className="w-16 h-16" fill="currentColor" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+                                            <svg className="w-20 h-20" fill="currentColor" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
                                         </div>
                                         {/* Right: Info */}
-                                        <div className="flex flex-col items-end h-full justify-between py-1">
-                                            <span className="text-xs font-bold text-blue-500 tracking-[0.2em]">CHECKS</span>
+                                        <div className="flex flex-col items-end">
+                                            <span className="text-xs font-bold text-blue-500 tracking-[0.2em] mb-1">CHECKS</span>
                                             <span className="text-5xl font-black text-white tracking-tighter drop-shadow-lg">{stats.checks.length}</span>
                                         </div>
                                     </div>

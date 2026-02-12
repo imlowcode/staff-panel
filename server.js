@@ -31,13 +31,14 @@ const SALARY_RATES = {
     CHECK: 350
 };
 
-// ДАТА НАЧАЛА ОТСЧЕТА
-// Ставим 1 Февраля 2026, чтобы точно захватить данные со скриншота (08.02, 10.02)
-const START_DATE_LIMIT = new Date('2026-02-01T00:00:00').getTime();
+// ВАЖНО: Исправлен год на 2025. Если у тебя на сервере реально 2026, поменяй обратно.
+const START_DATE_LIMIT = new Date('2026-02-10T00:00:00').getTime();
 
 // ПРОВЕРКА НАЛИЧИЯ ПАРОЛЕЙ (ДЛЯ ОТЛАДКИ В RENDER)
 if (!process.env.DB_PASSWORD || !process.env.DB_LOGS_PASSWORD) {
     console.error("CRITICAL ERROR: Passwords not found in environment variables!");
+    console.error("DB_PASSWORD is: ", process.env.DB_PASSWORD ? "*****" : "MISSING");
+    console.error("DB_LOGS_PASSWORD is: ", process.env.DB_LOGS_PASSWORD ? "*****" : "MISSING");
 }
 
 // --- НАСТРОЙКА БАЗ ДАННЫХ ---
@@ -153,14 +154,6 @@ const saveState = async (key, value) => {
 // --- СЕРВИС АВТОМАТИЧЕСКОЙ ЗАРПЛАТЫ ---
 const startAutoSalaryService = async () => {
     console.log("🔄 Запуск сервиса авто-зарплаты...");
-    console.log("📅 Дата отсчета:", new Date(START_DATE_LIMIT).toISOString());
-
-    // ВАЖНО: Сбрасываем курсоры при старте, чтобы пересчитать баны с новой даты
-    // Это решит проблему, если раньше скрипт запомнил неправильный ID
-    try {
-        await dbLogs.query("DELETE FROM system_state WHERE service_key IN ('lastBanId', 'lastMuteId', 'lastCheckDate')");
-        console.log("⚠️ Курсоры сброшены для ресинхронизации.");
-    } catch (e) { console.error("Ошибка сброса курсоров", e); }
     
     let isProcessing = false;
 
@@ -168,16 +161,14 @@ const startAutoSalaryService = async () => {
     const state = await getState();
     if (!state.lastBanId) {
         try {
-            // Ищем первый бан после стартовой даты
+            // Ищем первый бан/мут после стартовой даты, чтобы начать отсчет
             const [firstBan] = await dbLiteBans.query('SELECT id FROM litebans_bans WHERE time >= ? ORDER BY id ASC LIMIT 1', [START_DATE_LIMIT]);
             const startBanId = firstBan.length > 0 ? firstBan[0].id - 1 : 0;
             await saveState('lastBanId', startBanId);
-            console.log(`🔎 Начальный ID бана: ${startBanId}`);
 
             const [firstMute] = await dbLiteBans.query('SELECT id FROM litebans_mutes WHERE time >= ? ORDER BY id ASC LIMIT 1', [START_DATE_LIMIT]);
             const startMuteId = firstMute.length > 0 ? firstMute[0].id - 1 : 0;
             await saveState('lastMuteId', startMuteId);
-            console.log(`🔎 Начальный ID мута: ${startMuteId}`);
 
             await saveState('lastCheckDate', START_DATE_LIMIT);
         } catch (e) { console.error("Ошибка инит курсоров", e); }
@@ -192,29 +183,25 @@ const startAutoSalaryService = async () => {
             
             // --- 1. БАНЫ ---
             const lastBanId = parseInt(currentState.lastBanId) || 0;
-            // Берем баны, которые новее последнего ID ИЛИ (если ID=0) новее даты
             const [newBans] = await dbLiteBans.query(
                 'SELECT * FROM litebans_bans WHERE id > ? AND time >= ? ORDER BY id ASC LIMIT 50', 
                 [lastBanId, START_DATE_LIMIT]
             );
 
             if (newBans.length > 0) {
-                console.log(`Найдено ${newBans.length} новых банов`);
                 let maxId = lastBanId;
                 for (const ban of newBans) {
                     maxId = Math.max(maxId, ban.id);
                     const adminIgn = ban.banned_by_name;
-                    // Пропускаем системные баны
-                    if (!adminIgn || ['Console','Anticheat','RCON', 'System'].some(s => adminIgn.toLowerCase().includes(s.toLowerCase()))) continue;
+                    if (!adminIgn || ['Console','Anticheat','RCON'].includes(adminIgn)) continue;
                     
+                    // Проверка дубликатов транзакций
                     if (await checkTransactionExists(`%бан #${ban.id}%`)) continue;
 
                     const discordId = await getDiscordIdByIgn(adminIgn);
                     if (discordId) {
                         await addBalance(discordId, SALARY_RATES.BAN, 'AUTO_SALARY', `Зарплата за бан #${ban.id}`);
-                        console.log(`💰 [БАН] Выплата -> ${adminIgn} (#${ban.id})`);
-                    } else {
-                        // console.log(`[БАН] Игрок ${adminIgn} не привязан к Discord`);
+                        console.log(`💰 [БАН] Выплата -> ${adminIgn}`);
                     }
                 }
                 await saveState('lastBanId', maxId);
@@ -228,19 +215,18 @@ const startAutoSalaryService = async () => {
             );
 
             if (newMutes.length > 0) {
-                console.log(`Найдено ${newMutes.length} новых мутов`);
                 let maxId = lastMuteId;
                 for (const mute of newMutes) {
                     maxId = Math.max(maxId, mute.id);
                     const adminIgn = mute.banned_by_name;
-                    if (!adminIgn || ['Console','Anticheat','RCON', 'System'].some(s => adminIgn.toLowerCase().includes(s.toLowerCase()))) continue;
+                    if (!adminIgn || ['Console','Anticheat','RCON'].includes(adminIgn)) continue;
 
                     if (await checkTransactionExists(`%мут #${mute.id}%`)) continue;
 
                     const discordId = await getDiscordIdByIgn(adminIgn);
                     if (discordId) {
                         await addBalance(discordId, SALARY_RATES.MUTE, 'AUTO_SALARY', `Зарплата за мут #${mute.id}`);
-                        console.log(`💰 [МУТ] Выплата -> ${adminIgn} (#${mute.id})`);
+                        console.log(`💰 [МУТ] Выплата -> ${adminIgn}`);
                     }
                 }
                 await saveState('lastMuteId', maxId);
@@ -254,7 +240,6 @@ const startAutoSalaryService = async () => {
             );
 
             if (newChecks.length > 0) {
-                console.log(`Найдено ${newChecks.length} новых проверок`);
                 let maxDate = lastCheckDate;
                 for (const check of newChecks) {
                     maxDate = Math.max(maxDate, check.date);
@@ -280,7 +265,7 @@ const startAutoSalaryService = async () => {
         }
     };
 
-    // Запускаем каждые 10 секунд
+    // Запускаем каждые 10 секунд (10000 мс)
     setInterval(checkNewEntries, 10000);
     checkNewEntries();
 };
