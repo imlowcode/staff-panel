@@ -37,48 +37,48 @@ type TabType = 'OVERVIEW' | 'WALLET' | 'STATS';
 type TimeFilter = 'ALL' | 'WEEK' | 'DAY';
 type TypeFilter = 'ALL' | 'BAN' | 'MUTE' | 'CHECK';
 
-// --- HEROICONS SOLID SET ---
+// --- FONTAWESOME SOLID ICONS ---
 const Icons = {
-    // Nav: Overview (Squares2x2)
+    // Nav: Overview (Table Columns)
     Overview: () => (
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
-            <path fillRule="evenodd" d="M3 6a3 3 0 013-3h2.25a3 3 0 013 3v2.25a3 3 0 01-3 3H6a3 3 0 01-3-3V6zm9.75 0a3 3 0 013-3H18a3 3 0 013 3v2.25a3 3 0 01-3 3h-2.25a3 3 0 01-3-3V6zM3 15.75a3 3 0 013-3h2.25a3 3 0 013 3V18a3 3 0 01-3 3H6a3 3 0 01-3-3v-2.25zm9.75 0a3 3 0 013-3H18a3 3 0 013 3V18a3 3 0 01-3 3h-2.25a3 3 0 01-3-3v-2.25z" clipRule="evenodd" />
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="currentColor" className="w-5 h-5">
+            <path d="M0 96C0 60.7 28.7 32 64 32H448c35.3 0 64 28.7 64 64V416c0 35.3-28.7 64-64 64H64c-35.3 0-64-28.7-64-64V96zm64 64V416H224V160H64zm384 0H288V416H448V160z"/>
         </svg>
     ),
-    // Nav: Stats (ChartBar)
+    // Nav: Stats (Chart Simple)
     Stats: () => (
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
-            <path fillRule="evenodd" d="M3 6a3 3 0 013-3h2.25a3 3 0 013 3v2.25a3 3 0 01-3 3H6a3 3 0 01-3-3V6zm9.75 0a3 3 0 013-3H18a3 3 0 013 3v2.25a3 3 0 01-3 3h-2.25a3 3 0 01-3-3V6zM3 15.75a3 3 0 013-3h2.25a3 3 0 013 3V18a3 3 0 01-3 3H6a3 3 0 01-3-3v-2.25zm9.75 0a3 3 0 013-3H18a3 3 0 013 3V18a3 3 0 01-3 3h-2.25a3 3 0 01-3-3v-2.25z" clipRule="evenodd" />
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" fill="currentColor" className="w-5 h-5">
+            <path d="M160 80c0-26.5 21.5-48 48-48h32c26.5 0 48 21.5 48 48V432c0 26.5-21.5 48-48 48H208c-26.5 0-48-21.5-48-48V80zM0 272c0-26.5 21.5-48 48-48H80c26.5 0 48 21.5 48 48V432c0 26.5-21.5 48-48 48H48c-26.5 0-48-21.5-48-48V272zM368 96h32c26.5 0 48 21.5 48 48V432c0 26.5-21.5 48-48 48H352c-26.5 0-48-21.5-48-48V144c0-26.5 21.5-48 48-48z"/>
         </svg>
     ),
     // Nav: Wallet (Wallet)
     Wallet: () => (
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
-            <path d="M2.25 2.25a.75.75 0 000 1.5h1.386c.17 0 .318.114.362.278l2.558 9.592a3.752 3.752 0 00-2.806 3.63c0 .414.336.75.75.75h15.75a.75.75 0 000-1.5H5.378A2.25 2.25 0 017.5 15h11.218a.75.75 0 00.674-.421 60.358 60.358 0 002.96-7.228.75.75 0 00-.525-.965A60.864 60.864 0 005.68 4.509l-.232-.867A1.875 1.875 0 003.636 2.25H2.25zM3.75 20.25a1.5 1.5 0 113 0 1.5 1.5 0 01-3 0zM16.5 20.25a1.5 1.5 0 113 0 1.5 1.5 0 01-3 0z" />
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="currentColor" className="w-5 h-5">
+            <path d="M64 32C28.7 32 0 60.7 0 96V416c0 35.3 28.7 64 64 64H448c35.3 0 64-28.7 64-64V192c0-35.3-28.7-64-64-64H80c-8.8 0-16-7.2-16-16s7.2-16 16-16H448c17.7 0 32-14.3 32-32s-14.3-32-32-32H64zM416 272a32 32 0 1 1 0 64 32 32 0 1 1 0-64z"/>
         </svg>
     ),
-    // Stats: Ban (Gavel / Hammer) - Standard Gavel
+    // Stats: Ban (Gavel)
     Gavel: () => (
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-full h-full">
-           <path fillRule="evenodd" d="M15.75 2.25a6.75 6.75 0 00-6.65 7.9l-6.5 6.5a3 3 0 004.24 4.24l6.5-6.5a6.75 6.75 0 102.41-12.14zm-2.8 12.9l-4.72 4.71a1.5 1.5 0 01-2.12-2.12l4.71-4.72a6.74 6.74 0 012.13 2.13z" clipRule="evenodd" />
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="currentColor" className="w-full h-full">
+            <path d="M64 64c0-17.7-14.3-32-32-32S0 46.3 0 64V400c0 44.2 35.8 80 80 80H480c17.7 0 32-14.3 32-32s-14.3-32-32-32H80c-8.8 0-16-7.2-16-16V64zm406.6 86.6c12.5-12.5 12.5-32.8 0-45.3l-64-64c-12.5-12.5-32.8-12.5-45.3 0L192 210.7l-42.6-9.6c-24.5-5.5-48.4 9.6-53.9 34.1s9.6 48.4 34.1 53.9l125.6 28.2c19.7 4.4 40.3-4.1 52.8-19.9l20.2-25.6 98.4 98.4c12.5 12.5 32.8 12.5 45.3 0l64-64c12.5-12.5 12.5-32.8 0-45.3l-98.4-98.4L470.6 150.6z"/>
         </svg>
     ),
-    // Stats: Mute (Speaker X)
+    // Stats: Mute (Volume Xmark)
     Mute: () => (
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-full h-full">
-            <path d="M13.5 4.06c0-1.336-1.616-2.005-2.56-1.06l-4.5 4.5H4.508c-1.141 0-2.318.664-2.66 1.905A9.76 9.76 0 001.5 12c0 .898.121 1.768.35 2.595.341 1.24 1.518 1.905 2.659 1.905h1.93l4.5 4.5c.945.945 2.561.276 2.561-1.06V4.06zM17.78 9.22a.75.75 0 10-1.06 1.06L18.44 12l-1.72 1.72a.75.75 0 101.06 1.06l1.72-1.72 1.72 1.72a.75.75 0 101.06-1.06L20.56 12l1.72-1.72a.75.75 0 10-1.06-1.06l-1.72 1.72-1.72-1.72z" />
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512" fill="currentColor" className="w-full h-full">
+            <path d="M301.1 34.8C312.6 40 320 51.4 320 64V448c0 12.6-7.4 24-18.9 29.2s-25 3.1-34.4-5.3L131.8 352H64c-35.3 0-64-28.7-64-64V224c0-35.3 28.7-64 64-64h67.8L266.7 40.1c9.4-8.4 22.9-10.4 34.4-5.3zM425 167l55 55 55-55c9.4-9.4 24.6-9.4 33.9 0s9.4 24.6 0 33.9l-55 55 55 55c9.4 9.4 9.4 24.6 0 33.9s-24.6 9.4-33.9 0l-55-55-55 55c-9.4 9.4-24.6 9.4-33.9 0s-9.4-24.6 0-33.9l55-55-55-55c-9.4-9.4-9.4-24.6 0-33.9s24.6-9.4 33.9 0z"/>
         </svg>
     ),
-    // Stats: Check (Clipboard Check)
+    // Stats: Check (Check Circle)
     Inspect: () => (
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-full h-full">
-            <path fillRule="evenodd" d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25zm4.53 7.22l-4.5 4.5a.75.75 0 01-1.06 0l-2.25-2.25a.75.75 0 011.06-1.06l1.72 1.72 3.97-3.97a.75.75 0 111.06 1.06z" clipRule="evenodd" />
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="currentColor" className="w-full h-full">
+             <path d="M256 512A256 256 0 1 0 256 0a256 256 0 1 0 0 512zM369 209L241 337c-9.4 9.4-24.6 9.4-33.9 0l-64-64c-9.4-9.4-9.4-24.6 0-33.9s24.6-9.4 33.9 0l47 47L335 175c9.4-9.4 24.6-9.4 33.9 0s9.4 24.6 0 33.9z"/>
         </svg>
     ),
     // Small Icon for Feed: Ban (Gavel)
     Ban: () => (
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6">
-           <path fillRule="evenodd" d="M15.75 2.25a6.75 6.75 0 00-6.65 7.9l-6.5 6.5a3 3 0 004.24 4.24l6.5-6.5a6.75 6.75 0 102.41-12.14zm-2.8 12.9l-4.72 4.71a1.5 1.5 0 01-2.12-2.12l4.71-4.72a6.74 6.74 0 012.13 2.13z" clipRule="evenodd" />
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="currentColor" className="w-6 h-6">
+           <path d="M64 64c0-17.7-14.3-32-32-32S0 46.3 0 64V400c0 44.2 35.8 80 80 80H480c17.7 0 32-14.3 32-32s-14.3-32-32-32H80c-8.8 0-16-7.2-16-16V64zm406.6 86.6c12.5-12.5 12.5-32.8 0-45.3l-64-64c-12.5-12.5-32.8-12.5-45.3 0L192 210.7l-42.6-9.6c-24.5-5.5-48.4 9.6-53.9 34.1s9.6 48.4 34.1 53.9l125.6 28.2c19.7 4.4 40.3-4.1 52.8-19.9l20.2-25.6 98.4 98.4c12.5 12.5 32.8 12.5 45.3 0l64-64c12.5-12.5 12.5-32.8 0-45.3l-98.4-98.4L470.6 150.6z"/>
         </svg>
     )
 };
@@ -142,7 +142,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ member, currentUser, onBack, 
       const amountVal = parseInt(withdrawAmount);
       
       if (!withdrawIgn.trim()) return alert("Введите никнейм!");
-      if (isNaN(amountVal) || amountVal < 5000) return alert("Минимум 5000 AMT.");
+      if (isNaN(amountVal) || amountVal < 5000) return alert("Минимум 5000 ₪.");
       
       if (economy && amountVal > economy.balance) {
           return alert("Недостаточно средств на балансе!");
@@ -395,7 +395,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ member, currentUser, onBack, 
                             <h3 className="text-white/40 text-xs font-black uppercase tracking-[0.3em] mb-4">Текущий Баланс</h3>
                             <div className="text-8xl md:text-9xl font-black text-white tracking-tighter drop-shadow-2xl mb-8 flex items-baseline justify-center">
                                 {loadingEconomy ? "..." : economy?.balance.toLocaleString()}
-                                <span className="text-2xl md:text-3xl text-gray-600 font-medium ml-4 tracking-normal">AMT</span>
+                                <span className="text-2xl md:text-3xl text-gray-600 font-medium ml-4 tracking-normal">₪</span>
                             </div>
 
                             {/* Main Action Button */}
@@ -454,7 +454,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ member, currentUser, onBack, 
                                                 <div className="text-[10px] text-gray-600 font-mono">{formatDate(tx.date)}</div>
                                             </div>
                                             <div className="font-mono text-sm font-bold text-red-400">
-                                                {tx.amount} AMT
+                                                {tx.amount} ₪
                                             </div>
                                         </div>
                                     ))
@@ -478,7 +478,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ member, currentUser, onBack, 
                                                 <div className="text-[10px] text-gray-600 font-mono">{formatDate(tx.date)}</div>
                                             </div>
                                             <div className="font-mono text-sm font-bold text-emerald-400">
-                                                +{tx.amount} AMT
+                                                +{tx.amount} ₪
                                             </div>
                                         </div>
                                     ))
@@ -566,7 +566,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ member, currentUser, onBack, 
                                         'bg-blue-500/10 text-blue-500'
                                     }`}>
                                         <div className="w-6 h-6">
-                                            {item.type === 'BAN' ? <Icons.Ban /> : item.type === 'MUTE' ? <Icons.Mute /> : <Icons.Inspect />}
+                                            {item.type === 'BAN' ? <Icons.Gavel /> : item.type === 'MUTE' ? <Icons.Mute /> : <Icons.Inspect />}
                                         </div>
                                     </div>
 
@@ -622,36 +622,36 @@ const UserProfile: React.FC<UserProfileProps> = ({ member, currentUser, onBack, 
                     </div>
                 </div>
             )}
-        </div>
 
-        {/* --- WITHDRAW MODAL --- */}
-        {isWithdrawMode && (
-             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-fade-in">
-                <div className="bg-[#0f0f0f] border border-white/10 rounded-3xl p-8 w-full max-w-sm shadow-2xl relative">
-                    <button onClick={() => setIsWithdrawMode(false)} className="absolute top-6 right-6 text-gray-500 hover:text-white transition-colors">✕</button>
-                    
-                    <div className="mb-6">
-                        <h3 className="text-xl font-black text-white uppercase tracking-tight">Вывод средств</h3>
-                        <p className="text-xs text-gray-500 mt-1">Средства будут зачислены на игровой аккаунт</p>
-                    </div>
-
-                    <div className="space-y-4">
-                        <div>
-                            <label className="text-[10px] font-bold text-gray-500 uppercase mb-2 block tracking-widest">Никнейм</label>
-                            <input type="text" value={withdrawIgn} onChange={(e) => setWithdrawIgn(e.target.value)} className="bg-[#151515] border border-white/10 w-full h-12 rounded-xl px-4 text-sm font-bold text-white outline-none focus:border-purple-500 transition-colors" placeholder="Steve" />
+            {/* --- WITHDRAW MODAL --- */}
+            {isWithdrawMode && (
+                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-fade-in">
+                    <div className="bg-[#0f0f0f] border border-white/10 rounded-3xl p-8 w-full max-w-sm shadow-2xl relative">
+                        <button onClick={() => setIsWithdrawMode(false)} className="absolute top-6 right-6 text-gray-500 hover:text-white transition-colors">✕</button>
+                        
+                        <div className="mb-6">
+                            <h3 className="text-xl font-black text-white uppercase tracking-tight">Вывод средств</h3>
+                            <p className="text-xs text-gray-500 mt-1">Средства будут зачислены на игровой аккаунт</p>
                         </div>
-                        <div>
-                            <label className="text-[10px] font-bold text-gray-500 uppercase mb-2 block tracking-widest">Сумма (AMT)</label>
-                            <input type="number" value={withdrawAmount} onChange={(e) => setWithdrawAmount(e.target.value)} placeholder="5000" className="bg-[#151515] border border-white/10 w-full h-12 rounded-xl px-4 text-sm font-bold text-white outline-none focus:border-purple-500 transition-colors" />
-                            <div className="text-right mt-1">
-                                <span className="text-[10px] text-gray-600 font-mono">Баланс: {economy?.balance}</span>
+
+                        <div className="space-y-4">
+                            <div>
+                                <label className="text-[10px] font-bold text-gray-500 uppercase mb-2 block tracking-widest">Никнейм</label>
+                                <input type="text" value={withdrawIgn} onChange={(e) => setWithdrawIgn(e.target.value)} className="bg-[#151515] border border-white/10 w-full h-12 rounded-xl px-4 text-sm font-bold text-white outline-none focus:border-purple-500 transition-colors" placeholder="Steve" />
                             </div>
+                            <div>
+                                <label className="text-[10px] font-bold text-gray-500 uppercase mb-2 block tracking-widest">Сумма (AMT)</label>
+                                <input type="number" value={withdrawAmount} onChange={(e) => setWithdrawAmount(e.target.value)} placeholder="5000" className="bg-[#151515] border border-white/10 w-full h-12 rounded-xl px-4 text-sm font-bold text-white outline-none focus:border-purple-500 transition-colors" />
+                                <div className="text-right mt-1">
+                                    <span className="text-[10px] text-gray-600 font-mono">Баланс: {economy?.balance}</span>
+                                </div>
+                            </div>
+                            <ModernButton onClick={handleWithdraw} isLoading={isProcessingTx} fullWidth className="h-12 mt-2 rounded-xl">Подтвердить</ModernButton>
                         </div>
-                        <ModernButton onClick={handleWithdraw} isLoading={isProcessingTx} fullWidth className="h-12 mt-2 rounded-xl">Подтвердить</ModernButton>
                     </div>
-                </div>
-             </div>
-        )}
+                 </div>
+            )}
+        </div>
     </div>
   );
 };
