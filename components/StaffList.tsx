@@ -10,38 +10,13 @@ interface StaffListProps {
   refreshTrigger: number;
 }
 
-// --- FONTAWESOME SOLID ICONS ---
+// --- FEATHER ICONS (https://feathericons.com/) ---
 const Icons = {
-    // Search (Magnifying Glass)
-    Search: () => (
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="currentColor" className="w-4 h-4">
-            <path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0s208 93.1 208 208zM208 352a144 144 0 1 0 0-288 144 144 0 1 0 0 288z"/>
-        </svg>
-    ),
-    // Logout (Right From Bracket)
-    Logout: () => (
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="currentColor" className="w-4 h-4">
-            <path d="M377.9 105.9L500.7 228.7c7.2 7.2 11.3 17.1 11.3 27.3s-4.1 20.1-11.3 27.3L377.9 406.1c-6.4 6.4-15 9.9-24 9.9c-18.7 0-33.9-15.2-33.9-33.9l0-62.1-128 0c-17.7 0-32-14.3-32-32l0-64c0-17.7 14.3-32 32-32l128 0 0-62.1c0-18.7 15.2-33.9 33.9-33.9c9 0 17.6 3.6 24 9.9zM160 96L96 96c-17.7 0-32 14.3-32 32l0 256c0 17.7 14.3 32 32 32l64 0c17.7 0 32 14.3 32 32s-14.3 32-32 32l-64 0c-53 0-96-43-96-96L0 128C0 75 43 32 96 32l64 0c17.7 0 32 14.3 32 32s-14.3 32-32 32z"/>
-        </svg>
-    ),
-    // Users (Users)
-    Users: () => (
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512" fill="currentColor" className="w-6 h-6">
-            <path d="M144 0a80 80 0 1 1 0 160A80 80 0 1 1 144 0zM512 0a80 80 0 1 1 0 160A80 80 0 1 1 512 0zM0 292.8C0 251 32.6 216 72.9 216h46.2c40.3 0 72.9 35 72.9 76.8V448H0V292.8zM240 256h160c26.5 0 48 21.5 48 48v48h32c26.5 0 48 21.5 48 48v48H112V352c0-26.5 21.5-48 48-48h32V256zM567.1 216C607.4 216 640 251 640 292.8V448H448V292.8C448 251 480.6 216 520.9 216h46.2z"/>
-        </svg>
-    ),
-    // Shield (Shield Halved)
-    Shield: () => (
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="currentColor" className="w-6 h-6">
-            <path d="M256 0c4.6 0 9.2 1 13.4 2.9L457.7 82.8c22 9.3 38.4 31 38.3 57.2c-.5 99.2-27.4 153.8-58.8 201.2c-31 46.8-70.5 86.8-171 166.1c-6.2 4.9-14.8 4.9-21 0c-40.5-31.9-88-69.4-126-118c-44-56.3-70.2-114.7-70.2-184.3c0-23.7 13.8-44.4 33.7-53.7L242.6 2.9C246.8 1 251.4 0 256 0zM256 90.6l-149 61c-6.1 2.5-11 7.8-11 15.2c0 14.1 0 27.6 0 41.2c0 53.6 21.3 98.7 54.4 141c33.4 42.7 75.3 75.8 105.6 99.7V90.6z"/>
-        </svg>
-    ),
-    // Signal (Signal)
-    Signal: () => (
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512" fill="currentColor" className="w-6 h-6">
-            <path d="M384 160c-17.7 0-32-14.3-32-32s14.3-32 32-32H544c17.7 0 32 14.3 32 32V288c0 17.7-14.3 32-32 32s-32-14.3-32-32V160H384zM160 304c-17.7 0-32-14.3-32-32s14.3-32 32-32h32c17.7 0 32 14.3 32 32s-14.3 32-32 32H160zM48 352c-17.7 0-32-14.3-32-32s14.3-32 32-32H176c17.7 0 32 14.3 32 32s-14.3 32-32 32H48zm64 64c-17.7 0-32-14.3-32-32s14.3-32 32-32h64c17.7 0 32 14.3 32 32s-14.3 32-32 32H112zM320 224c-17.7 0-32-14.3-32-32s14.3-32 32-32h96c17.7 0 32 14.3 32 32s-14.3 32-32 32H320z"/>
-        </svg>
-    )
+    Search: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>,
+    Logout: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>,
+    Users: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>,
+    Shield: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>,
+    Activity: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
 };
 
 const StaffList: React.FC<StaffListProps> = ({ currentUser, onLogout, onSelectUser, refreshTrigger }) => {
@@ -177,7 +152,7 @@ const StaffList: React.FC<StaffListProps> = ({ currentUser, onLogout, onSelectUs
                   {/* Online (Mocked for visual parity) */}
                  <div className="bg-[#0A0A0A] border border-white/5 rounded-3xl p-6 relative overflow-hidden group">
                      <div className="absolute right-0 top-0 p-6 text-[#151515] group-hover:text-[#1a1a1a] transition-colors">
-                        <Icons.Signal />
+                        <Icons.Activity />
                      </div>
                      <h3 className="text-emerald-500 text-[10px] font-black uppercase tracking-widest mb-1">Статус Систем</h3>
                      <div className="text-4xl font-black text-white flex items-center gap-3">
