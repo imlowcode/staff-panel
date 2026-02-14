@@ -77,12 +77,22 @@ const Icons = {
     Close: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>,
     Clock: () => <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>,
     User: () => <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>,
-    
+    Inbox: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"></polyline><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"></path></svg>,
+
     // Arrows
     ArrowUp: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg>,
     ArrowDown: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><polyline points="19 12 12 19 5 12"></polyline></svg>
 };
 
+// --- COMPONENTS ---
+const EmptyState = ({ label }: { label: string }) => (
+    <div className="flex flex-col items-center justify-center h-full py-16 text-center opacity-40">
+        <div className="bg-white/5 p-4 rounded-full mb-3 text-white">
+             <Icons.Inbox />
+        </div>
+        <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">{label}</span>
+    </div>
+);
 
 const UserProfile: React.FC<UserProfileProps> = ({ member, currentUser, onBack, onUpdate, onShowToast }) => {
   const isOwner = member.user.id === currentUser.id;
@@ -397,9 +407,12 @@ const UserProfile: React.FC<UserProfileProps> = ({ member, currentUser, onBack, 
             {activeTab === 'WALLET' && (
                 <div className="flex flex-col gap-6">
                     {/* 1. CENTER: BALANCE + ACTION */}
-                    <div className="w-full bg-gradient-to-br from-[#0F0F0F] to-[#050505] border border-white/5 rounded-3xl p-10 relative overflow-hidden flex flex-col items-center justify-center text-center shadow-2xl">
-                         <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-10 mix-blend-overlay"></div>
-                         <div className="absolute top-0 w-full h-px bg-gradient-to-r from-transparent via-purple-500/50 to-transparent"></div>
+                    <div className="w-full bg-[#050505] border border-white/5 rounded-3xl p-10 relative overflow-hidden flex flex-col items-center justify-center text-center shadow-2xl group">
+                         {/* Glow Effects */}
+                         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] bg-purple-900/10 rounded-full blur-[120px] pointer-events-none group-hover:bg-purple-900/15 transition-all duration-1000"></div>
+                         <div className="absolute top-0 right-0 w-[200px] h-[200px] bg-blue-600/5 rounded-full blur-[80px] pointer-events-none"></div>
+
+                         <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-overlay"></div>
                          
                          <div className="relative z-10">
                             <h3 className="text-white/40 text-xs font-black uppercase tracking-[0.3em] mb-4">Текущий Баланс</h3>
@@ -455,7 +468,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ member, currentUser, onBack, 
                             </h3>
                             <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 space-y-2">
                                 {withdrawals.length === 0 ? (
-                                    <div className="flex items-center justify-center h-full text-gray-700 text-xs font-bold uppercase tracking-widest">Нет выводов</div>
+                                    <EmptyState label="Нет выводов" />
                                 ) : (
                                     withdrawals.map(tx => (
                                         <div key={tx.id} className="flex justify-between items-center p-3 rounded-xl bg-[#111] border border-white/5 hover:border-white/10 transition-colors">
@@ -479,7 +492,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ member, currentUser, onBack, 
                             </h3>
                             <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 space-y-2">
                                 {incomes.length === 0 ? (
-                                    <div className="flex items-center justify-center h-full text-gray-700 text-xs font-bold uppercase tracking-widest">Нет пополнений</div>
+                                    <EmptyState label="Нет пополнений" />
                                 ) : (
                                     incomes.map(tx => (
                                         <div key={tx.id} className="flex justify-between items-center p-3 rounded-xl bg-[#111] border border-white/5 hover:border-white/10 transition-colors">
@@ -504,24 +517,24 @@ const UserProfile: React.FC<UserProfileProps> = ({ member, currentUser, onBack, 
                 <div className="flex flex-col gap-8">
                     
                     {/* Filters */}
-                    <div className="flex flex-col md:flex-row justify-between items-center gap-4 bg-[#0A0A0A] border border-white/5 p-2 rounded-2xl">
-                        <div className="flex gap-1 bg-[#111] p-1 rounded-xl">
+                    <div className="flex flex-col md:flex-row justify-between items-center gap-4 bg-[#0A0A0A] border border-white/5 p-1.5 rounded-2xl">
+                        <div className="flex gap-1 bg-[#111] p-1 rounded-xl w-full md:w-auto overflow-x-auto">
                             {(['ALL', 'BAN', 'MUTE', 'CHECK'] as const).map(t => (
                                 <button 
                                     key={t}
                                     onClick={() => setTypeFilter(t)}
-                                    className={`px-6 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all ${typeFilter === t ? 'bg-white text-black shadow-md' : 'text-gray-500 hover:text-white'}`}
+                                    className={`px-6 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all whitespace-nowrap ${typeFilter === t ? 'bg-white text-black shadow-lg' : 'text-gray-500 hover:text-white hover:bg-white/5'}`}
                                 >
                                     {t === 'ALL' ? 'Все' : t === 'BAN' ? 'Баны' : t === 'MUTE' ? 'Муты' : 'Проверки'}
                                 </button>
                             ))}
                         </div>
-                        <div className="flex gap-1 bg-[#111] p-1 rounded-xl">
+                        <div className="flex gap-1 bg-[#111] p-1 rounded-xl w-full md:w-auto overflow-x-auto">
                             {(['ALL', 'WEEK', 'DAY'] as const).map(t => (
                                 <button 
                                     key={t}
                                     onClick={() => setTimeFilter(t)}
-                                    className={`px-4 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all ${timeFilter === t ? 'bg-purple-600 text-white shadow-md' : 'text-gray-500 hover:text-white'}`}
+                                    className={`px-4 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all whitespace-nowrap ${timeFilter === t ? 'bg-purple-600 text-white shadow-lg' : 'text-gray-500 hover:text-white hover:bg-white/5'}`}
                                 >
                                     {t === 'ALL' ? 'Все время' : t === 'WEEK' ? 'Неделя' : '24 Часа'}
                                 </button>
@@ -570,8 +583,8 @@ const UserProfile: React.FC<UserProfileProps> = ({ member, currentUser, onBack, 
                         </div>
 
                         {filteredHistory.length === 0 ? (
-                            <div className="py-20 text-center border-2 border-dashed border-white/5 rounded-3xl">
-                                <div className="text-gray-600 font-bold uppercase tracking-widest text-xs">Нет данных за выбранный период</div>
+                            <div className="bg-[#0A0A0A] border border-white/5 rounded-3xl p-8">
+                                <EmptyState label="Нет данных за выбранный период" />
                             </div>
                         ) : (
                             filteredHistory.map((item, idx) => (
@@ -650,38 +663,38 @@ const UserProfile: React.FC<UserProfileProps> = ({ member, currentUser, onBack, 
                     </div>
                 </div>
             )}
-        </div>
 
-        {/* --- WITHDRAW MODAL --- */}
-        {isWithdrawMode && (
-             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-fade-in">
-                <div className="bg-[#0f0f0f] border border-white/10 rounded-3xl p-8 w-full max-w-sm shadow-2xl relative">
-                    <button onClick={() => setIsWithdrawMode(false)} className="absolute top-6 right-6 text-gray-500 hover:text-white transition-colors">
-                        <Icons.Close />
-                    </button>
-                    
-                    <div className="mb-6">
-                        <h3 className="text-xl font-black text-white uppercase tracking-tight">Вывод средств</h3>
-                        <p className="text-xs text-gray-500 mt-1">Средства будут зачислены на игровой аккаунт</p>
-                    </div>
-
-                    <div className="space-y-4">
-                        <div>
-                            <label className="text-[10px] font-bold text-gray-500 uppercase mb-2 block tracking-widest">Никнейм</label>
-                            <input type="text" value={withdrawIgn} onChange={(e) => setWithdrawIgn(e.target.value)} className="bg-[#151515] border border-white/10 w-full h-12 rounded-xl px-4 text-sm font-bold text-white outline-none focus:border-purple-500 transition-colors" placeholder="Steve" />
+            {/* --- WITHDRAW MODAL --- */}
+            {isWithdrawMode && (
+                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-fade-in">
+                    <div className="bg-[#0f0f0f] border border-white/10 rounded-3xl p-8 w-full max-w-sm shadow-2xl relative">
+                        <button onClick={() => setIsWithdrawMode(false)} className="absolute top-6 right-6 text-gray-500 hover:text-white transition-colors">
+                            <Icons.Close />
+                        </button>
+                        
+                        <div className="mb-6">
+                            <h3 className="text-xl font-black text-white uppercase tracking-tight">Вывод средств</h3>
+                            <p className="text-xs text-gray-500 mt-1">Средства будут зачислены на игровой аккаунт</p>
                         </div>
-                        <div>
-                            <label className="text-[10px] font-bold text-gray-500 uppercase mb-2 block tracking-widest">Сумма (₪)</label>
-                            <input type="number" value={withdrawAmount} onChange={(e) => setWithdrawAmount(e.target.value)} placeholder="5000" className="bg-[#151515] border border-white/10 w-full h-12 rounded-xl px-4 text-sm font-bold text-white outline-none focus:border-purple-500 transition-colors" />
-                            <div className="text-right mt-1">
-                                <span className="text-[10px] text-gray-600 font-mono">Баланс: {economy?.balance}</span>
+
+                        <div className="space-y-4">
+                            <div>
+                                <label className="text-[10px] font-bold text-gray-500 uppercase mb-2 block tracking-widest">Никнейм</label>
+                                <input type="text" value={withdrawIgn} onChange={(e) => setWithdrawIgn(e.target.value)} className="bg-[#151515] border border-white/10 w-full h-12 rounded-xl px-4 text-sm font-bold text-white outline-none focus:border-purple-500 transition-colors" placeholder="Steve" />
                             </div>
+                            <div>
+                                <label className="text-[10px] font-bold text-gray-500 uppercase mb-2 block tracking-widest">Сумма (₪)</label>
+                                <input type="number" value={withdrawAmount} onChange={(e) => setWithdrawAmount(e.target.value)} placeholder="5000" className="bg-[#151515] border border-white/10 w-full h-12 rounded-xl px-4 text-sm font-bold text-white outline-none focus:border-purple-500 transition-colors" />
+                                <div className="text-right mt-1">
+                                    <span className="text-[10px] text-gray-600 font-mono">Баланс: {economy?.balance}</span>
+                                </div>
+                            </div>
+                            <ModernButton onClick={handleWithdraw} isLoading={isProcessingTx} fullWidth className="h-12 mt-2 rounded-xl">Подтвердить</ModernButton>
                         </div>
-                        <ModernButton onClick={handleWithdraw} isLoading={isProcessingTx} fullWidth className="h-12 mt-2 rounded-xl">Подтвердить</ModernButton>
                     </div>
-                </div>
-             </div>
-        )}
+                 </div>
+            )}
+        </div>
     </div>
   );
 };
