@@ -34,6 +34,29 @@ const getDurationString = (start: number, end: number) => {
     return `${days}д`; 
 };
 
+// Функция для очистки и сокращения текста транзакции
+const formatTransactionComment = (comment: string | undefined): string => {
+    if (!comment) return '';
+    
+    // Удаляем ID в квадратных скобках: [ID: Sun Feb 08 2026 ...]
+    let cleaned = comment.replace(/\[ID:.*?\]/g, '').trim();
+    
+    // Сокращаем "Зарплата за проверку"
+    if (cleaned.startsWith('Зарплата за проверку')) {
+        cleaned = cleaned.replace('Зарплата за проверку', 'Проверка:');
+    }
+    // Сокращаем "Зарплата за бан"
+    else if (cleaned.startsWith('Зарплата за бан')) {
+        cleaned = cleaned.replace('Зарплата за бан', 'Бан:');
+    }
+     // Сокращаем "Зарплата за мут"
+     else if (cleaned.startsWith('Зарплата за мут')) {
+        cleaned = cleaned.replace('Зарплата за мут', 'Мут:');
+    }
+
+    return cleaned;
+};
+
 type TabType = 'OVERVIEW' | 'WALLET' | 'STATS';
 type TimeFilter = 'ALL' | 'WEEK' | 'DAY';
 type TypeFilter = 'ALL' | 'BAN' | 'MUTE' | 'CHECK';
@@ -182,7 +205,8 @@ const UserProfile: React.FC<UserProfileProps> = ({ member, currentUser, onBack, 
       let combined = [
           ...stats.bans.map(b => ({...b, type: 'BAN' as const, sort: b.time})),
           ...stats.mutes.map(m => ({...m, type: 'MUTE' as const, sort: m.time})),
-          ...stats.checks.map(c => ({...c, type: 'CHECK' as const, sort: c.date, time: c.date})) 
+          // Store original Check type (Anydesk/Discord) in `checkMethod` and use generic `CHECK` type for filtering
+          ...stats.checks.map(c => ({...c, type: 'CHECK' as const, checkMethod: c.type, sort: c.date, time: c.date})) 
       ];
 
       const now = Date.now();
@@ -286,32 +310,32 @@ const UserProfile: React.FC<UserProfileProps> = ({ member, currentUser, onBack, 
             {activeTab === 'OVERVIEW' && (
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     {/* Left: Skin & Main Info */}
-                    <div className="lg:col-span-1 bg-[#0A0A0A] border border-white/5 rounded-3xl p-8 flex flex-col items-center relative overflow-hidden min-h-[500px]">
+                    <div className="lg:col-span-1 bg-[#0A0A0A] border border-white/5 rounded-3xl p-6 flex flex-col items-center relative overflow-hidden min-h-[400px]">
                         <div className="absolute inset-0 bg-gradient-to-b from-purple-500/5 to-transparent"></div>
                         
                         {/* 2D Skin */}
-                        <div className="relative z-10 w-full flex-1 flex items-center justify-center py-6">
+                        <div className="relative z-10 w-full flex-1 flex items-end justify-center pb-4">
                             {member.ign ? (
                                 <img 
                                     src={`https://mc-heads.net/body/${member.ign}/400`} 
                                     alt="Skin" 
-                                    className="h-[350px] object-contain drop-shadow-[0_20px_40px_rgba(0,0,0,0.5)] transform hover:scale-105 transition-transform duration-500"
+                                    className="h-[300px] w-auto object-contain drop-shadow-[0_20px_40px_rgba(0,0,0,0.5)] transform hover:scale-105 transition-transform duration-500"
                                 />
                             ) : (
                                 <div className="text-gray-600 text-xs font-mono uppercase">Скин недоступен</div>
                             )}
                         </div>
                         {/* Quick Stats */}
-                        <div className="w-full bg-[#151515] p-4 rounded-xl border border-white/5 text-center z-10">
-                             <div className="text-xs text-gray-500 font-bold uppercase mb-1">Дата вступления</div>
-                             <div className="text-white text-sm font-mono">{formatDate(member.joined_at)}</div>
+                        <div className="w-full bg-[#151515] p-3 rounded-xl border border-white/5 text-center z-10 mt-auto">
+                             <div className="text-[10px] text-gray-500 font-bold uppercase mb-1">Дата вступления</div>
+                             <div className="text-white text-xs font-mono">{formatDate(member.joined_at)}</div>
                         </div>
                     </div>
 
                     {/* Right: Details */}
                     <div className="lg:col-span-2 flex flex-col gap-6">
                         {/* Playtime Card */}
-                        <div className="bg-[#0A0A0A] border border-white/5 rounded-3xl p-8 relative overflow-hidden group">
+                        <div className="bg-[#0A0A0A] border border-white/5 rounded-3xl p-6 relative overflow-hidden group">
                             <div className="absolute right-0 top-0 w-64 h-64 bg-emerald-500/10 blur-[80px] group-hover:bg-emerald-500/20 transition-all"></div>
                             <h3 className="text-gray-500 text-xs font-bold uppercase tracking-widest mb-4">Время на сервере</h3>
                             <div className="flex items-baseline gap-4 relative z-10">
@@ -320,47 +344,47 @@ const UserProfile: React.FC<UserProfileProps> = ({ member, currentUser, onBack, 
                             </div>
                         </div>
 
-                        {/* Extra Grid */}
+                        {/* Extra Grid - Consolidated Cards */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 flex-1">
-                             <div className="bg-[#0A0A0A] border border-white/5 rounded-3xl p-8 flex flex-col justify-center">
+                             <div className="bg-[#0A0A0A] border border-white/5 rounded-3xl p-6 flex flex-col justify-center">
                                  <h3 className="text-gray-500 text-xs font-bold uppercase tracking-widest mb-4 flex items-center gap-2">
                                     <Icons.Edit /> Управление профилем
                                  </h3>
-                                 <div className="space-y-4">
+                                 <div className="space-y-3">
                                      <div>
-                                         <label className="text-[10px] text-gray-600 uppercase font-bold block mb-2">Minecraft IGN</label>
+                                         <label className="text-[10px] text-gray-600 uppercase font-bold block mb-1">Minecraft IGN</label>
                                          <div className="flex gap-2">
                                              <input 
                                                  value={ignInput}
                                                  onChange={(e) => setIgnInput(e.target.value)}
                                                  disabled={!isAdmin}
-                                                 className="bg-[#151515] border border-white/10 rounded-lg px-3 py-2 text-sm text-white w-full outline-none focus:border-purple-500 transition-colors disabled:opacity-50"
+                                                 className="bg-[#151515] border border-white/10 rounded-lg px-3 py-2 text-xs text-white w-full outline-none focus:border-purple-500 transition-colors disabled:opacity-50"
                                              />
                                              {isAdmin && (
-                                                 <button onClick={handleSaveIgn} className="bg-purple-600 hover:bg-purple-500 text-white px-4 rounded-lg text-xs font-bold transition-colors">OK</button>
+                                                 <button onClick={handleSaveIgn} className="bg-purple-600 hover:bg-purple-500 text-white px-3 rounded-lg text-xs font-bold transition-colors">OK</button>
                                              )}
                                          </div>
                                      </div>
                                  </div>
                              </div>
                              
-                             {/* Account Info Card */}
-                             <div className="bg-[#0A0A0A] border border-white/5 rounded-3xl p-8 flex flex-col justify-center">
+                             {/* Account Info Card - More Compact */}
+                             <div className="bg-[#0A0A0A] border border-white/5 rounded-3xl p-6 flex flex-col justify-center">
                                  <h3 className="text-gray-500 text-xs font-bold uppercase tracking-widest mb-4">
-                                     Информация об аккаунте
+                                     Информация
                                  </h3>
-                                 <div className="space-y-3">
+                                 <div className="space-y-2">
                                      <div className="flex justify-between items-center pb-2 border-b border-white/5">
-                                         <span className="text-gray-500 text-xs font-bold">Роль</span>
-                                         <span className={`text-xs font-mono px-2 py-0.5 rounded ${roleDef?.badgeBg || 'bg-gray-800'}`}>{roleDef?.name || 'User'}</span>
+                                         <span className="text-gray-500 text-[10px] font-bold">Роль</span>
+                                         <span className={`text-[10px] font-mono px-2 py-0.5 rounded ${roleDef?.badgeBg || 'bg-gray-800'}`}>{roleDef?.name || 'User'}</span>
                                      </div>
                                      <div className="flex justify-between items-center pb-2 border-b border-white/5">
-                                         <span className="text-gray-500 text-xs font-bold">Discord ID</span>
-                                         <span className="text-gray-300 text-xs font-mono">{member.user.id}</span>
+                                         <span className="text-gray-500 text-[10px] font-bold">Discord ID</span>
+                                         <span className="text-gray-300 text-[10px] font-mono truncate max-w-[120px]">{member.user.id}</span>
                                      </div>
                                      <div className="flex justify-between items-center">
-                                         <span className="text-gray-500 text-xs font-bold">Статус</span>
-                                         <span className="text-emerald-500 text-xs font-bold uppercase">Активен</span>
+                                         <span className="text-gray-500 text-[10px] font-bold">Статус</span>
+                                         <span className="text-emerald-500 text-[10px] font-bold uppercase">Активен</span>
                                      </div>
                                  </div>
                              </div>
@@ -379,9 +403,9 @@ const UserProfile: React.FC<UserProfileProps> = ({ member, currentUser, onBack, 
                          
                          <div className="relative z-10">
                             <h3 className="text-white/40 text-xs font-black uppercase tracking-[0.3em] mb-4">Текущий Баланс</h3>
-                            <div className="text-8xl md:text-9xl font-black text-white tracking-tighter drop-shadow-2xl mb-8 flex items-baseline justify-center">
+                            <div className="text-7xl md:text-8xl font-black text-white tracking-tighter drop-shadow-2xl mb-8 flex items-start justify-center">
                                 {loadingEconomy ? "..." : economy?.balance.toLocaleString()}
-                                <span className="text-2xl md:text-3xl text-gray-600 font-medium ml-4 tracking-normal">₪</span>
+                                <span className="text-4xl md:text-5xl text-gray-500 font-medium ml-2 relative top-2">₪</span>
                             </div>
 
                             {/* Main Action Button */}
@@ -435,11 +459,11 @@ const UserProfile: React.FC<UserProfileProps> = ({ member, currentUser, onBack, 
                                 ) : (
                                     withdrawals.map(tx => (
                                         <div key={tx.id} className="flex justify-between items-center p-3 rounded-xl bg-[#111] border border-white/5 hover:border-white/10 transition-colors">
-                                            <div>
-                                                <div className="text-gray-300 text-xs font-bold">{tx.comment || 'Вывод средств'}</div>
+                                            <div className="overflow-hidden mr-2">
+                                                <div className="text-gray-300 text-xs font-bold truncate" title={tx.comment}>{formatTransactionComment(tx.comment) || 'Вывод средств'}</div>
                                                 <div className="text-[10px] text-gray-600 font-mono">{formatDate(tx.date)}</div>
                                             </div>
-                                            <div className="font-mono text-sm font-bold text-red-400">
+                                            <div className="font-mono text-xs font-bold text-red-400 whitespace-nowrap">
                                                 {tx.amount} ₪
                                             </div>
                                         </div>
@@ -459,11 +483,11 @@ const UserProfile: React.FC<UserProfileProps> = ({ member, currentUser, onBack, 
                                 ) : (
                                     incomes.map(tx => (
                                         <div key={tx.id} className="flex justify-between items-center p-3 rounded-xl bg-[#111] border border-white/5 hover:border-white/10 transition-colors">
-                                            <div>
-                                                <div className="text-gray-300 text-xs font-bold">{tx.comment || tx.type}</div>
+                                            <div className="overflow-hidden mr-2">
+                                                <div className="text-gray-300 text-xs font-bold truncate" title={tx.comment}>{formatTransactionComment(tx.comment) || tx.type}</div>
                                                 <div className="text-[10px] text-gray-600 font-mono">{formatDate(tx.date)}</div>
                                             </div>
-                                            <div className="font-mono text-sm font-bold text-emerald-400">
+                                            <div className="font-mono text-xs font-bold text-emerald-400 whitespace-nowrap">
                                                 +{tx.amount} ₪
                                             </div>
                                         </div>
@@ -580,6 +604,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ member, currentUser, onBack, 
                                         </div>
                                         
                                         <div className="text-white font-bold text-lg mb-2">
+                                            {/* Fix for displaying proper check method (Anydesk/Discord) */}
                                             {item.type === 'CHECK' ? (
                                                 <span>Проверка игрока <span className="text-blue-400">{item.target}</span></span>
                                             ) : (
@@ -592,7 +617,8 @@ const UserProfile: React.FC<UserProfileProps> = ({ member, currentUser, onBack, 
                                              {item.type === 'CHECK' ? (
                                                  <div className="flex items-center gap-2">
                                                      <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
-                                                     Метод: <span className="text-white font-bold uppercase">{item.type}</span>
+                                                     {/* Use checkMethod which stores the original type (Anydesk/Discord) */}
+                                                     Метод: <span className="text-white font-bold uppercase">{item.checkMethod}</span>
                                                  </div>
                                              ) : (
                                                  <>

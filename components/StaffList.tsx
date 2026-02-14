@@ -139,7 +139,7 @@ const StaffList: React.FC<StaffListProps> = ({ currentUser, onLogout, onSelectUs
       <div className="w-full max-w-7xl relative z-10 flex flex-col gap-8">
             
             {/* KPI ROW */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                  {/* Total Staff */}
                  <div className="bg-[#0A0A0A] border border-white/5 rounded-3xl p-6 relative overflow-hidden group">
                      <div className="absolute right-0 top-0 p-6 text-[#151515] group-hover:text-[#1a1a1a] transition-colors">
@@ -147,21 +147,6 @@ const StaffList: React.FC<StaffListProps> = ({ currentUser, onLogout, onSelectUs
                      </div>
                      <h3 className="text-purple-500 text-[10px] font-black uppercase tracking-widest mb-1">Всего персонала</h3>
                      <div className="text-4xl font-black text-white">{loading ? "-" : totalStaff}</div>
-                 </div>
-
-                  {/* Online (Mocked for visual parity) */}
-                 <div className="bg-[#0A0A0A] border border-white/5 rounded-3xl p-6 relative overflow-hidden group">
-                     <div className="absolute right-0 top-0 p-6 text-[#151515] group-hover:text-[#1a1a1a] transition-colors">
-                        <Icons.Activity />
-                     </div>
-                     <h3 className="text-emerald-500 text-[10px] font-black uppercase tracking-widest mb-1">Статус Систем</h3>
-                     <div className="text-4xl font-black text-white flex items-center gap-3">
-                         ONLINE
-                         <span className="relative flex h-3 w-3">
-                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                              <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
-                        </span>
-                     </div>
                  </div>
 
                  {/* Admins */}
