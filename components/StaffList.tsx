@@ -19,6 +19,20 @@ const Icons = {
     Activity: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
 };
 
+// --- TOOLTIP COMPONENT ---
+const ActionTooltip = ({ text, children }: { text: string, children: React.ReactNode }) => (
+    <div className="relative group flex items-center justify-center">
+        {children}
+        <div className="absolute top-full mt-3 opacity-0 group-hover:opacity-100 transition-all duration-200 pointer-events-none z-50">
+            <div className="bg-black/90 backdrop-blur-md border border-white/10 text-gray-200 text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-lg shadow-xl translate-y-[-5px] group-hover:translate-y-0 transition-transform whitespace-nowrap">
+                {text}
+                {/* Little arrow */}
+                <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-black/90 border-t border-l border-white/10 rotate-45"></div>
+            </div>
+        </div>
+    </div>
+);
+
 const StaffList: React.FC<StaffListProps> = ({ currentUser, onLogout, onSelectUser, refreshTrigger }) => {
   const [staff, setStaff] = useState<GuildMember[]>([]);
   const [loading, setLoading] = useState(true);
@@ -99,39 +113,45 @@ const StaffList: React.FC<StaffListProps> = ({ currentUser, onLogout, onSelectUs
 
             {/* Search & Actions */}
             <div className="flex items-center gap-3 w-full md:w-auto">
-                <div className="relative group w-full md:w-64">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-500 group-focus-within:text-purple-500 transition-colors">
-                        <Icons.Search />
+                <ActionTooltip text="Поиск">
+                    <div className="relative group w-full md:w-64">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-500 group-focus-within:text-purple-500 transition-colors">
+                            <Icons.Search />
+                        </div>
+                        <input 
+                            type="text" 
+                            placeholder="Поиск сотрудника..." 
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="bg-[#151515] border border-white/10 text-white text-xs rounded-xl block w-full pl-10 p-3 outline-none focus:border-purple-500/50 transition-colors font-medium placeholder-gray-600 shadow-inner"
+                        />
                     </div>
-                    <input 
-                        type="text" 
-                        placeholder="Поиск сотрудника..." 
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="bg-[#151515] border border-white/10 text-white text-xs rounded-xl block w-full pl-10 p-3 outline-none focus:border-purple-500/50 transition-colors font-medium placeholder-gray-600"
-                    />
-                </div>
+                </ActionTooltip>
                 
                 <div className="h-8 w-px bg-white/10 mx-2 hidden md:block"></div>
 
-                <button 
-                    onClick={handleMyProfileClick}
-                    className="flex items-center gap-2 bg-[#151515] hover:bg-[#202020] border border-white/10 rounded-xl px-4 py-2.5 transition-all group"
-                >
-                    <img 
-                        src={currentUser.avatar ? `https://cdn.discordapp.com/avatars/${currentUser.id}/${currentUser.avatar}.png` : `https://cdn.discordapp.com/embed/avatars/0.png`} 
-                        className="w-5 h-5 rounded-full border border-white/10" 
-                        alt="Me" 
-                    />
-                    <span className="text-xs font-bold text-gray-300 group-hover:text-white hidden md:block">{currentUser.username}</span>
-                </button>
+                <ActionTooltip text="Мой Профиль">
+                    <button 
+                        onClick={handleMyProfileClick}
+                        className="flex items-center gap-2 bg-[#151515] hover:bg-[#202020] border border-white/10 rounded-xl px-4 py-2.5 transition-all group active:scale-95 active:bg-[#252525]"
+                    >
+                        <img 
+                            src={currentUser.avatar ? `https://cdn.discordapp.com/avatars/${currentUser.id}/${currentUser.avatar}.png` : `https://cdn.discordapp.com/embed/avatars/0.png`} 
+                            className="w-5 h-5 rounded-full border border-white/10" 
+                            alt="Me" 
+                        />
+                        <span className="text-xs font-bold text-gray-300 group-hover:text-white hidden md:block">{currentUser.username}</span>
+                    </button>
+                </ActionTooltip>
 
-                <button 
-                    onClick={onLogout}
-                    className="bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400 rounded-xl p-2.5 transition-colors"
-                >
-                    <Icons.Logout />
-                </button>
+                <ActionTooltip text="Выйти">
+                    <button 
+                        onClick={onLogout}
+                        className="bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400 rounded-xl p-2.5 transition-colors active:scale-95 active:bg-red-500/30"
+                    >
+                        <Icons.Logout />
+                    </button>
+                </ActionTooltip>
             </div>
       </div>
 
@@ -204,7 +224,7 @@ const StaffList: React.FC<StaffListProps> = ({ currentUser, onLogout, onSelectUs
                                         <button 
                                             key={member.user.id}
                                             onClick={() => onSelectUser(member)}
-                                            className="group relative bg-[#0A0A0A] border border-white/5 hover:border-white/10 rounded-2xl p-0 text-left transition-all duration-300 hover:-translate-y-1 hover:shadow-xl overflow-hidden flex flex-col items-center"
+                                            className="group relative bg-[#0A0A0A] border border-white/5 hover:border-white/10 rounded-2xl p-0 text-left transition-all duration-300 hover:-translate-y-1 hover:shadow-xl overflow-hidden flex flex-col items-center active:scale-[0.98] active:opacity-90 active:border-purple-500/50"
                                         >
                                             {/* Top Background Gradient */}
                                             <div className={`absolute top-0 w-full h-24 bg-gradient-to-b ${roleDef.color} opacity-10 group-hover:opacity-20 transition-opacity`}></div>
