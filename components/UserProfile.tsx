@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { GuildMember, DiscordUser, PlayerStats, EconomyData } from '../types';
 import { ROLE_HIERARCHY, ALLOWED_ADMIN_IDS, API_BASE_URL } from '../constants';
 import ModernButton from './MinecraftButton';
@@ -37,51 +37,35 @@ const getDurationString = (start: number, end: number) => {
 // Функция для очистки и сокращения текста транзакции
 const formatTransactionComment = (comment: string | undefined): string => {
     if (!comment) return '';
-    
-    // Удаляем ID в квадратных скобках: [ID: Sun Feb 08 2026 ...]
     let cleaned = comment.replace(/\[ID:.*?\]/g, '').trim();
-    
-    // Сокращаем "Зарплата за проверку"
-    if (cleaned.startsWith('Зарплата за проверку')) {
-        cleaned = cleaned.replace('Зарплата за проверку', 'Проверка:');
-    }
-    // Сокращаем "Зарплата за бан"
-    else if (cleaned.startsWith('Зарплата за бан')) {
-        cleaned = cleaned.replace('Зарплата за бан', 'Бан:');
-    }
-     // Сокращаем "Зарплата за мут"
-     else if (cleaned.startsWith('Зарплата за мут')) {
-        cleaned = cleaned.replace('Зарплата за мут', 'Мут:');
-    }
-
+    if (cleaned.startsWith('Зарплата за проверку')) cleaned = cleaned.replace('Зарплата за проверку', 'Проверка:');
+    else if (cleaned.startsWith('Зарплата за бан')) cleaned = cleaned.replace('Зарплата за бан', 'Бан:');
+    else if (cleaned.startsWith('Зарплата за мут')) cleaned = cleaned.replace('Зарплата за мут', 'Мут:');
     return cleaned;
 };
 
 type TabType = 'OVERVIEW' | 'WALLET' | 'STATS';
 type TimeFilter = 'ALL' | 'WEEK' | 'DAY';
 type TypeFilter = 'ALL' | 'BAN' | 'MUTE' | 'CHECK';
+type WalletTimeFilter = 'ALL' | 'MONTH' | 'WEEK' | 'DAY';
 
-// --- FEATHER ICONS (https://feathericons.com/) ---
+// --- FEATHER ICONS ---
 const Icons = {
     Overview: () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>,
     Wallet: () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg>,
     Stats: () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>,
-    
-    // Stats Types
-    Ban: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"></polygon><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>, // Octagon X
-    Mute: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="1" y1="1" x2="23" y2="23"></line><path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"></path><path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>, // Mic Off
-    Check: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect><path d="M9 14l2 2 4-4"></path></svg>, // Clipboard Check
-    
-    // UI
+    Ban: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"></polygon><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>,
+    Mute: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="1" y1="1" x2="23" y2="23"></line><path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"></path><path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>,
+    Check: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect><path d="M9 14l2 2 4-4"></path></svg>,
     Edit: () => <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>,
     Close: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>,
     Clock: () => <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>,
     User: () => <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>,
     Inbox: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"></polyline><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"></path></svg>,
-
-    // Arrows
     ArrowUp: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg>,
-    ArrowDown: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><polyline points="19 12 12 19 5 12"></polyline></svg>
+    ArrowDown: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><polyline points="19 12 12 19 5 12"></polyline></svg>,
+    Search: () => <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>,
+    Alert: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
 };
 
 // --- COMPONENTS ---
@@ -93,6 +77,115 @@ const EmptyState = ({ label }: { label: string }) => (
         <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">{label}</span>
     </div>
 );
+
+// --- CHARTS (SVG) ---
+const ActivityBarChart = ({ stats }: { stats: PlayerStats }) => {
+    // Generate last 7 days data
+    const data = useMemo(() => {
+        const days = [];
+        for (let i = 6; i >= 0; i--) {
+            const d = new Date();
+            d.setDate(d.getDate() - i);
+            d.setHours(0,0,0,0);
+            const ts = d.getTime();
+            
+            // Count logic
+            const dayEnd = ts + 86400000;
+            const count = 
+                stats.bans.filter(b => b.time >= ts && b.time < dayEnd).length +
+                stats.mutes.filter(m => m.time >= ts && m.time < dayEnd).length +
+                stats.checks.filter(c => c.date >= ts && c.date < dayEnd).length;
+                
+            days.push({ label: d.toLocaleDateString('ru-RU', {weekday: 'short'}), count });
+        }
+        return days;
+    }, [stats]);
+
+    const max = Math.max(...data.map(d => d.count), 5); // Min max is 5
+
+    return (
+        <div className="h-32 flex items-end justify-between gap-2">
+            {data.map((d, i) => {
+                const height = (d.count / max) * 100;
+                return (
+                    <div key={i} className="flex flex-col items-center gap-2 flex-1 group">
+                         <div className="relative w-full flex justify-center items-end h-full">
+                            <div 
+                                style={{ height: `${height}%` }} 
+                                className="w-full max-w-[24px] bg-white/10 rounded-t-sm group-hover:bg-purple-500 transition-all duration-500 relative min-h-[4px]"
+                            >
+                                <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-white text-black text-[9px] font-bold px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity">
+                                    {d.count}
+                                </div>
+                            </div>
+                         </div>
+                         <span className="text-[9px] font-mono uppercase text-gray-600 group-hover:text-gray-400">{d.label}</span>
+                    </div>
+                );
+            })}
+        </div>
+    );
+};
+
+const DistributionChart = ({ stats }: { stats: PlayerStats }) => {
+    const total = stats.bans.length + stats.mutes.length + stats.checks.length;
+    if (total === 0) return <div className="text-[10px] text-gray-600 text-center py-10">Нет данных</div>;
+
+    const banP = (stats.bans.length / total) * 100;
+    const muteP = (stats.mutes.length / total) * 100;
+    const checkP = (stats.checks.length / total) * 100;
+
+    // SVG Dasharray logic for donut
+    const r = 40;
+    const c = 2 * Math.PI * r;
+    
+    const off1 = c - (banP / 100) * c;
+    const off2 = c - (muteP / 100) * c;
+    const off3 = c - (checkP / 100) * c;
+
+    return (
+        <div className="flex items-center gap-6">
+            <div className="relative w-24 h-24">
+                <svg width="100%" height="100%" viewBox="0 0 100 100" className="-rotate-90">
+                    <circle cx="50" cy="50" r={r} fill="transparent" stroke="#222" strokeWidth="12" />
+                    {/* Bans - Red */}
+                    <circle cx="50" cy="50" r={r} fill="transparent" stroke="#ef4444" strokeWidth="12" strokeDasharray={c} strokeDashoffset={off1} />
+                    {/* Mutes - Orange (stacked by rotation, simplified here by dashoffset math tricks usually, but lets do simple overlay for now or segments) 
+                        Actually simpler: Use segments. 
+                    */}
+                </svg>
+                {/* Simplified CSS Conic Gradient is better for simple donuts */}
+                <div 
+                    className="absolute inset-0 rounded-full"
+                    style={{
+                        background: `conic-gradient(
+                            #ef4444 0% ${banP}%, 
+                            #f97316 ${banP}% ${banP + muteP}%, 
+                            #3b82f6 ${banP + muteP}% 100%
+                        )`,
+                        mask: 'radial-gradient(transparent 55%, black 56%)',
+                        WebkitMask: 'radial-gradient(transparent 55%, black 56%)'
+                    }}
+                ></div>
+                <div className="absolute inset-0 flex items-center justify-center flex-col">
+                    <span className="text-lg font-black text-white">{total}</span>
+                    <span className="text-[8px] uppercase text-gray-500 tracking-wider">Всего</span>
+                </div>
+            </div>
+            <div className="space-y-2">
+                <div className="flex items-center gap-2 text-[10px] uppercase font-bold text-gray-400">
+                    <span className="w-2 h-2 rounded-full bg-red-500"></span> Баны ({stats.bans.length})
+                </div>
+                <div className="flex items-center gap-2 text-[10px] uppercase font-bold text-gray-400">
+                    <span className="w-2 h-2 rounded-full bg-orange-500"></span> Муты ({stats.mutes.length})
+                </div>
+                <div className="flex items-center gap-2 text-[10px] uppercase font-bold text-gray-400">
+                    <span className="w-2 h-2 rounded-full bg-blue-500"></span> Проверки ({stats.checks.length})
+                </div>
+            </div>
+        </div>
+    );
+};
 
 const UserProfile: React.FC<UserProfileProps> = ({ member, currentUser, onBack, onUpdate, onShowToast }) => {
   const isOwner = member.user.id === currentUser.id;
@@ -106,6 +199,10 @@ const UserProfile: React.FC<UserProfileProps> = ({ member, currentUser, onBack, 
   const [timeFilter, setTimeFilter] = useState<TimeFilter>('ALL');
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('ALL');
 
+  // Wallet Filters
+  const [walletSearch, setWalletSearch] = useState('');
+  const [walletTimeFilter, setWalletTimeFilter] = useState<WalletTimeFilter>('ALL');
+
   // Data State
   const [stats, setStats] = useState<PlayerStats | null>(null);
   const [loadingStats, setLoadingStats] = useState(false);
@@ -117,7 +214,11 @@ const UserProfile: React.FC<UserProfileProps> = ({ member, currentUser, onBack, 
   const [withdrawIgn, setWithdrawIgn] = useState('');
   const [isWithdrawMode, setIsWithdrawMode] = useState(false);
   const [isProcessingTx, setIsProcessingTx] = useState(false);
+  
+  // Admin Confirm State
   const [adminAmount, setAdminAmount] = useState('');
+  const [adminAction, setAdminAction] = useState<{ type: 'ADMIN_ADD' | 'ADMIN_REMOVE', amount: string } | null>(null);
+  const [showAdminConfirm, setShowAdminConfirm] = useState(false);
 
   useEffect(() => {
     setDisplayedName(member.ign || member.nick || member.user.global_name || member.user.username);
@@ -176,18 +277,34 @@ const UserProfile: React.FC<UserProfileProps> = ({ member, currentUser, onBack, 
       finally { setIsProcessingTx(false); }
   };
 
-  const handleAdminManage = async (type: 'ADMIN_ADD' | 'ADMIN_REMOVE') => {
-      if (!isAdmin) return;
+  const initiateAdminAction = (type: 'ADMIN_ADD' | 'ADMIN_REMOVE') => {
+    if (!adminAmount || isNaN(parseInt(adminAmount)) || parseInt(adminAmount) <= 0) {
+        onShowToast("Введите корректную сумму", 'error');
+        return;
+    }
+    setAdminAction({ type, amount: adminAmount });
+    setShowAdminConfirm(true);
+  };
+
+  const confirmAdminAction = async () => {
+      if (!isAdmin || !adminAction) return;
       setIsProcessingTx(true);
       try {
           const res = await fetch(`${API_BASE_URL}/api/economy/admin/manage`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ adminId: currentUser.id, targetUserId: member.user.id, amount: adminAmount, type })
+              body: JSON.stringify({ 
+                  adminId: currentUser.id, 
+                  targetUserId: member.user.id, 
+                  amount: adminAction.amount, 
+                  type: adminAction.type 
+              })
           });
           if (res.ok) { 
               setAdminAmount(''); fetchEconomy(member.user.id); 
-              onShowToast(type === 'ADMIN_ADD' ? 'Средства выданы' : 'Средства сняты', 'success');
+              onShowToast(adminAction.type === 'ADMIN_ADD' ? 'Средства выданы' : 'Средства сняты', 'success');
+              setShowAdminConfirm(false);
+              setAdminAction(null);
           } 
           else { 
               const data = await res.json();
@@ -253,12 +370,32 @@ const UserProfile: React.FC<UserProfileProps> = ({ member, currentUser, onBack, 
       }).length;
   };
 
-  const { withdrawals, incomes } = (() => {
-      const all = economy?.history || [];
+  const { withdrawals, incomes } = useMemo(() => {
+      let all = economy?.history || [];
+      
+      // Filter by Search
+      if (walletSearch) {
+          const lower = walletSearch.toLowerCase();
+          all = all.filter(t => 
+             (t.comment && t.comment.toLowerCase().includes(lower)) || 
+             t.amount.toString().includes(lower) || 
+             t.type.toLowerCase().includes(lower)
+          );
+      }
+
+      // Filter by Time
+      const now = Date.now();
+      all = all.filter(t => {
+          if (walletTimeFilter === 'DAY') return (now - t.date) <= 86400000;
+          if (walletTimeFilter === 'WEEK') return (now - t.date) <= 604800000;
+          if (walletTimeFilter === 'MONTH') return (now - t.date) <= 2592000000;
+          return true;
+      });
+
       const withdrawals = all.filter(t => t.type === 'WITHDRAW' || t.type === 'ADMIN_REMOVE');
       const incomes = all.filter(t => t.type !== 'WITHDRAW' && t.type !== 'ADMIN_REMOVE');
       return { withdrawals, incomes };
-  })();
+  }, [economy, walletSearch, walletTimeFilter]);
 
   return (
     <div className="min-h-screen bg-[#020202] text-white font-sans p-6 flex flex-col items-center">
@@ -448,17 +585,44 @@ const UserProfile: React.FC<UserProfileProps> = ({ member, currentUser, onBack, 
                                     onChange={e => setAdminAmount(e.target.value)}
                                     className="bg-[#050505] border border-white/10 rounded-lg px-4 py-2 text-sm text-white w-full outline-none focus:border-yellow-500/50"
                                 />
-                                <button onClick={() => handleAdminManage('ADMIN_ADD')} className="bg-emerald-900/30 text-emerald-400 border border-emerald-500/30 px-4 py-2 rounded-lg text-[10px] font-bold uppercase hover:bg-emerald-900/50 transition-colors whitespace-nowrap">
+                                <button onClick={() => initiateAdminAction('ADMIN_ADD')} className="bg-emerald-900/30 text-emerald-400 border border-emerald-500/30 px-4 py-2 rounded-lg text-[10px] font-bold uppercase hover:bg-emerald-900/50 transition-colors whitespace-nowrap">
                                     + Выдать
                                 </button>
-                                <button onClick={() => handleAdminManage('ADMIN_REMOVE')} className="bg-red-900/30 text-red-400 border border-red-500/30 px-4 py-2 rounded-lg text-[10px] font-bold uppercase hover:bg-red-900/50 transition-colors whitespace-nowrap">
+                                <button onClick={() => initiateAdminAction('ADMIN_REMOVE')} className="bg-red-900/30 text-red-400 border border-red-500/30 px-4 py-2 rounded-lg text-[10px] font-bold uppercase hover:bg-red-900/50 transition-colors whitespace-nowrap">
                                     - Забрать
                                 </button>
                             </div>
                         </div>
                     )}
+                    
+                    {/* 3. HISTORY FILTERS */}
+                    <div className="flex flex-col md:flex-row justify-between items-center gap-4 bg-[#0A0A0A] border border-white/5 p-2 rounded-2xl">
+                         <div className="relative w-full md:w-64">
+                             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-500">
+                                <Icons.Search />
+                             </div>
+                             <input 
+                                type="text"
+                                placeholder="Поиск по истории..."
+                                value={walletSearch}
+                                onChange={(e) => setWalletSearch(e.target.value)}
+                                className="bg-[#151515] border border-white/10 text-white text-xs rounded-xl block w-full pl-10 p-2.5 outline-none focus:border-purple-500/50 transition-colors"
+                             />
+                         </div>
+                         <div className="flex gap-1 bg-[#111] p-1 rounded-xl w-full md:w-auto overflow-x-auto">
+                            {(['ALL', 'MONTH', 'WEEK', 'DAY'] as const).map(t => (
+                                <button 
+                                    key={t}
+                                    onClick={() => setWalletTimeFilter(t)}
+                                    className={`px-4 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all whitespace-nowrap ${walletTimeFilter === t ? 'bg-white text-black shadow-lg' : 'text-gray-500 hover:text-white hover:bg-white/5'}`}
+                                >
+                                    {t === 'ALL' ? 'Все время' : t === 'MONTH' ? 'Месяц' : t === 'WEEK' ? 'Неделя' : 'День'}
+                                </button>
+                            ))}
+                         </div>
+                    </div>
 
-                    {/* 3. SPLIT HISTORY: WITHDRAWALS (LEFT) | INCOME (RIGHT) */}
+                    {/* 4. SPLIT HISTORY: WITHDRAWALS (LEFT) | INCOME (RIGHT) */}
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                         
                         {/* LEFT: Withdrawals */}
@@ -541,6 +705,22 @@ const UserProfile: React.FC<UserProfileProps> = ({ member, currentUser, onBack, 
                             ))}
                         </div>
                     </div>
+
+                    {/* NEW: VISUAL CHARTS ROW */}
+                    {stats && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="bg-[#0A0A0A] border border-white/5 rounded-3xl p-6">
+                                <h3 className="text-gray-500 text-[10px] font-bold uppercase tracking-widest mb-6">Активность (7 дней)</h3>
+                                <ActivityBarChart stats={stats} />
+                            </div>
+                            <div className="bg-[#0A0A0A] border border-white/5 rounded-3xl p-6">
+                                <h3 className="text-gray-500 text-[10px] font-bold uppercase tracking-widest mb-6">Распределение наказаний</h3>
+                                <div className="flex justify-center">
+                                    <DistributionChart stats={stats} />
+                                </div>
+                            </div>
+                        </div>
+                    )}
 
                     {/* KPI Cards */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -693,6 +873,45 @@ const UserProfile: React.FC<UserProfileProps> = ({ member, currentUser, onBack, 
                         </div>
                     </div>
                  </div>
+            )}
+
+            {/* --- ADMIN CONFIRM MODAL --- */}
+            {showAdminConfirm && adminAction && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-fade-in">
+                    <div className="bg-[#0f0f0f] border border-yellow-500/20 rounded-3xl p-8 w-full max-w-sm shadow-2xl relative">
+                        <div className="mb-6 text-center">
+                            <div className="w-12 h-12 rounded-full bg-yellow-500/10 text-yellow-500 flex items-center justify-center mx-auto mb-4">
+                                <Icons.Alert />
+                            </div>
+                            <h3 className="text-xl font-black text-white uppercase tracking-tight">Подтверждение</h3>
+                            <p className="text-xs text-gray-500 mt-2 leading-relaxed">
+                                Вы собираетесь {adminAction.type === 'ADMIN_ADD' ? 'выдать' : 'снять'} средства.
+                            </p>
+                        </div>
+
+                        <div className="bg-[#151515] rounded-xl p-4 mb-6 border border-white/5 space-y-2">
+                             <div className="flex justify-between text-xs">
+                                 <span className="text-gray-500">Сотрудник:</span>
+                                 <span className="text-white font-bold">{member.ign || member.user.username}</span>
+                             </div>
+                             <div className="flex justify-between text-xs">
+                                 <span className="text-gray-500">Сумма:</span>
+                                 <span className={`font-mono font-bold ${adminAction.type === 'ADMIN_ADD' ? 'text-emerald-400' : 'text-red-400'}`}>
+                                    {adminAction.type === 'ADMIN_ADD' ? '+' : '-'}{adminAction.amount} ₪
+                                 </span>
+                             </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3">
+                            <button onClick={() => setShowAdminConfirm(false)} className="h-11 rounded-xl bg-white/5 hover:bg-white/10 text-gray-400 text-[10px] font-bold uppercase tracking-widest transition-colors">
+                                Отмена
+                            </button>
+                            <ModernButton onClick={confirmAdminAction} isLoading={isProcessingTx} className="h-11 rounded-xl">
+                                Подтвердить
+                            </ModernButton>
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
     </div>
