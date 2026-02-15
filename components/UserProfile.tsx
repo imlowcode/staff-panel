@@ -78,7 +78,7 @@ const EmptyState = ({ label }: { label: string }) => (
     </div>
 );
 
-// --- CHARTS (SVG) ---
+// --- IMPROVED CHARTS ---
 const ActivityBarChart = ({ stats }: { stats: PlayerStats }) => {
     // Generate last 7 days data
     const data = useMemo(() => {
@@ -101,86 +101,133 @@ const ActivityBarChart = ({ stats }: { stats: PlayerStats }) => {
         return days;
     }, [stats]);
 
-    const max = Math.max(...data.map(d => d.count), 5); // Min max is 5
+    const max = Math.max(...data.map(d => d.count), 5); // Minimum max is 5 to allow grid lines
 
     return (
-        <div className="h-32 flex items-end justify-between gap-2">
-            {data.map((d, i) => {
-                const height = (d.count / max) * 100;
-                return (
-                    <div key={i} className="flex flex-col items-center gap-2 flex-1 group">
-                         <div className="relative w-full flex justify-center items-end h-full">
-                            <div 
-                                style={{ height: `${height}%` }} 
-                                className="w-full max-w-[24px] bg-white/10 rounded-t-sm group-hover:bg-purple-500 transition-all duration-500 relative min-h-[4px]"
-                            >
-                                <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-white text-black text-[9px] font-bold px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity">
-                                    {d.count}
+        <div className="relative h-48 w-full">
+            {/* Background Grid Lines */}
+            <div className="absolute inset-0 flex flex-col justify-between text-[9px] text-gray-700 font-mono z-0 pointer-events-none">
+                <div className="border-b border-white/5 w-full h-px"></div>
+                <div className="border-b border-white/5 w-full h-px"></div>
+                <div className="border-b border-white/5 w-full h-px"></div>
+                <div className="border-b border-white/5 w-full h-px"></div>
+                <div className="border-b border-white/10 w-full h-px"></div> {/* Baseline */}
+            </div>
+
+            {/* Bars Container */}
+            <div className="absolute inset-0 flex items-end justify-between px-2 pt-4 pb-0 z-10">
+                {data.map((d, i) => {
+                    const percentage = Math.max((d.count / max) * 100, 2); // Min 2% height for visibility
+                    return (
+                        <div key={i} className="flex flex-col items-center flex-1 h-full justify-end group gap-2">
+                             {/* The Bar */}
+                             <div className="relative w-full max-w-[28px] h-full flex items-end">
+                                <div 
+                                    style={{ height: `${percentage}%` }} 
+                                    className={`
+                                        w-full rounded-t-sm transition-all duration-500 ease-out relative
+                                        bg-gradient-to-t from-purple-900/50 to-purple-500
+                                        group-hover:from-purple-600 group-hover:to-purple-400
+                                        group-hover:shadow-[0_0_15px_rgba(168,85,247,0.4)]
+                                        min-h-[4px]
+                                    `}
+                                >
+                                    {/* Tooltip */}
+                                    <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-[#1a1a1a] border border-white/10 text-white text-[10px] font-bold px-2 py-1 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap shadow-xl z-20 pointer-events-none transform translate-y-2 group-hover:translate-y-0">
+                                        {d.count} действий
+                                        <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-[#1a1a1a] border-b border-r border-white/10 rotate-45"></div>
+                                    </div>
                                 </div>
-                            </div>
-                         </div>
-                         <span className="text-[9px] font-mono uppercase text-gray-600 group-hover:text-gray-400">{d.label}</span>
-                    </div>
-                );
-            })}
+                             </div>
+                             {/* Label */}
+                             <span className="text-[9px] font-bold uppercase text-gray-500 group-hover:text-gray-300 transition-colors">{d.label}</span>
+                        </div>
+                    );
+                })}
+            </div>
         </div>
     );
 };
 
 const DistributionChart = ({ stats }: { stats: PlayerStats }) => {
     const total = stats.bans.length + stats.mutes.length + stats.checks.length;
-    if (total === 0) return <div className="text-[10px] text-gray-600 text-center py-10">Нет данных</div>;
-
-    const banP = (stats.bans.length / total) * 100;
-    const muteP = (stats.mutes.length / total) * 100;
-    const checkP = (stats.checks.length / total) * 100;
-
-    // SVG Dasharray logic for donut
-    const r = 40;
-    const c = 2 * Math.PI * r;
     
-    const off1 = c - (banP / 100) * c;
-    const off2 = c - (muteP / 100) * c;
-    const off3 = c - (checkP / 100) * c;
+    // Safety check
+    if (total === 0) {
+        return (
+            <div className="flex flex-col items-center justify-center h-48 w-full text-center">
+                <div className="w-16 h-16 rounded-full border-4 border-gray-800 border-dashed mb-2 animate-spin-slow opacity-20"></div>
+                <div className="text-[10px] text-gray-600 uppercase font-bold tracking-widest">Нет данных</div>
+            </div>
+        );
+    }
+
+    const bans = stats.bans.length;
+    const mutes = stats.mutes.length;
+    const checks = stats.checks.length;
+
+    // Calculate degrees for conic gradient
+    const banDeg = (bans / total) * 360;
+    const muteDeg = (mutes / total) * 360;
+    const checkDeg = (checks / total) * 360;
+
+    // CSS Conic Gradient logic
+    // Starts at 0deg (top).
+    // Red (Bans) ends at banDeg.
+    // Orange (Mutes) starts at banDeg, ends at banDeg + muteDeg.
+    // Blue (Checks) starts at banDeg + muteDeg, ends at 360.
+    const gradient = `conic-gradient(
+        from 0deg,
+        #ef4444 0deg ${banDeg}deg,
+        #f97316 ${banDeg}deg ${banDeg + muteDeg}deg,
+        #3b82f6 ${banDeg + muteDeg}deg 360deg
+    )`;
 
     return (
-        <div className="flex items-center gap-6">
-            <div className="relative w-24 h-24">
-                <svg width="100%" height="100%" viewBox="0 0 100 100" className="-rotate-90">
-                    <circle cx="50" cy="50" r={r} fill="transparent" stroke="#222" strokeWidth="12" />
-                    {/* Bans - Red */}
-                    <circle cx="50" cy="50" r={r} fill="transparent" stroke="#ef4444" strokeWidth="12" strokeDasharray={c} strokeDashoffset={off1} />
-                    {/* Mutes - Orange (stacked by rotation, simplified here by dashoffset math tricks usually, but lets do simple overlay for now or segments) 
-                        Actually simpler: Use segments. 
-                    */}
-                </svg>
-                {/* Simplified CSS Conic Gradient is better for simple donuts */}
+        <div className="flex flex-col md:flex-row items-center justify-center gap-8 h-48 w-full">
+            
+            {/* The Donut */}
+            <div className="relative w-32 h-32 shrink-0 group">
+                {/* Glow Effect behind */}
+                <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-red-500/20 via-orange-500/20 to-blue-500/20 blur-xl opacity-50 group-hover:opacity-80 transition-opacity duration-500"></div>
+                
+                {/* The Chart */}
                 <div 
-                    className="absolute inset-0 rounded-full"
-                    style={{
-                        background: `conic-gradient(
-                            #ef4444 0% ${banP}%, 
-                            #f97316 ${banP}% ${banP + muteP}%, 
-                            #3b82f6 ${banP + muteP}% 100%
-                        )`,
-                        mask: 'radial-gradient(transparent 55%, black 56%)',
-                        WebkitMask: 'radial-gradient(transparent 55%, black 56%)'
-                    }}
-                ></div>
-                <div className="absolute inset-0 flex items-center justify-center flex-col">
-                    <span className="text-lg font-black text-white">{total}</span>
-                    <span className="text-[8px] uppercase text-gray-500 tracking-wider">Всего</span>
+                    className="w-full h-full rounded-full relative shadow-2xl transition-transform duration-500 group-hover:scale-105"
+                    style={{ background: gradient }}
+                >
+                    {/* Inner cutout to make it a donut */}
+                    <div className="absolute inset-4 bg-[#0A0A0A] rounded-full flex flex-col items-center justify-center z-10 border border-white/5">
+                        <span className="text-2xl font-black text-white leading-none">{total}</span>
+                        <span className="text-[8px] uppercase text-gray-500 tracking-widest mt-1 font-bold">Всего</span>
+                    </div>
                 </div>
             </div>
-            <div className="space-y-2">
-                <div className="flex items-center gap-2 text-[10px] uppercase font-bold text-gray-400">
-                    <span className="w-2 h-2 rounded-full bg-red-500"></span> Баны ({stats.bans.length})
+
+            {/* Legend */}
+            <div className="flex flex-col gap-3 min-w-[120px]">
+                <div className="flex items-center justify-between group cursor-default">
+                    <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]"></span>
+                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide group-hover:text-white transition-colors">Баны</span>
+                    </div>
+                    <span className="text-[10px] font-mono text-white opacity-60 group-hover:opacity-100">{bans}</span>
                 </div>
-                <div className="flex items-center gap-2 text-[10px] uppercase font-bold text-gray-400">
-                    <span className="w-2 h-2 rounded-full bg-orange-500"></span> Муты ({stats.mutes.length})
+                
+                <div className="flex items-center justify-between group cursor-default">
+                    <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-orange-500 shadow-[0_0_8px_rgba(249,115,22,0.5)]"></span>
+                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide group-hover:text-white transition-colors">Муты</span>
+                    </div>
+                    <span className="text-[10px] font-mono text-white opacity-60 group-hover:opacity-100">{mutes}</span>
                 </div>
-                <div className="flex items-center gap-2 text-[10px] uppercase font-bold text-gray-400">
-                    <span className="w-2 h-2 rounded-full bg-blue-500"></span> Проверки ({stats.checks.length})
+
+                <div className="flex items-center justify-between group cursor-default">
+                    <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]"></span>
+                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide group-hover:text-white transition-colors">Проверки</span>
+                    </div>
+                    <span className="text-[10px] font-mono text-white opacity-60 group-hover:opacity-100">{checks}</span>
                 </div>
             </div>
         </div>
@@ -319,7 +366,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ member, currentUser, onBack, 
     try {
         await updateMemberIgn(member.user.id, ignInput);
         onUpdate();
-        onShowToast("Игровой ник обновлен", 'success');
+        onShowToast("Ник обновлен на сайте и в Discord", 'success');
     } catch (e) { onShowToast("Ошибка сохранения", 'error'); } 
   };
 
