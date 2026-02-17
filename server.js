@@ -348,11 +348,32 @@ app.get('/api/staff', async (req, res) => {
 app.post('/api/ign', async (req, res) => {
     const { userId, ign } = req.body;
     if (!userId) return res.status(400).json({ error: "No ID" });
+    
+    const newNick = ign || "";
+
     try {
-        await saveProfileIgn(userId, ign || '');
-        res.json({ success: true, ign });
+        // 1. Сохраняем в БД
+        await saveProfileIgn(userId, newNick);
+
+        // 2. Обновляем ник в Discord
+        const response = await fetch(`https://discord.com/api/guilds/${TARGET_GUILD_ID}/members/${userId}`, {
+            method: 'PATCH',
+            headers: { 
+                'Authorization': `Bot ${process.env.BOT_TOKEN}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ nick: newNick })
+        });
+
+        if (!response.ok) {
+            console.error("Discord API Error (Nick Update):", await response.text());
+            // Мы не возвращаем ошибку клиенту, так как БД обновилась, но логируем это
+        }
+
+        res.json({ success: true, ign: newNick });
     } catch (e) {
-        res.status(500).json({ error: "DB Error" });
+        console.error("IGN Update Error:", e);
+        res.status(500).json({ error: "Server Error" });
     }
 });
 
