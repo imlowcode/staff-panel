@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { GuildMember, DiscordUser, PlayerStats, EconomyData } from '../types';
 import { ROLE_HIERARCHY, ALLOWED_ADMIN_IDS, API_BASE_URL } from '../constants';
 import ModernButton from './MinecraftButton';
@@ -37,51 +37,35 @@ const getDurationString = (start: number, end: number) => {
 // Функция для очистки и сокращения текста транзакции
 const formatTransactionComment = (comment: string | undefined): string => {
     if (!comment) return '';
-    
-    // Удаляем ID в квадратных скобках: [ID: Sun Feb 08 2026 ...]
     let cleaned = comment.replace(/\[ID:.*?\]/g, '').trim();
-    
-    // Сокращаем "Зарплата за проверку"
-    if (cleaned.startsWith('Зарплата за проверку')) {
-        cleaned = cleaned.replace('Зарплата за проверку', 'Проверка:');
-    }
-    // Сокращаем "Зарплата за бан"
-    else if (cleaned.startsWith('Зарплата за бан')) {
-        cleaned = cleaned.replace('Зарплата за бан', 'Бан:');
-    }
-     // Сокращаем "Зарплата за мут"
-     else if (cleaned.startsWith('Зарплата за мут')) {
-        cleaned = cleaned.replace('Зарплата за мут', 'Мут:');
-    }
-
+    if (cleaned.startsWith('Зарплата за проверку')) cleaned = cleaned.replace('Зарплата за проверку', 'Проверка:');
+    else if (cleaned.startsWith('Зарплата за бан')) cleaned = cleaned.replace('Зарплата за бан', 'Бан:');
+    else if (cleaned.startsWith('Зарплата за мут')) cleaned = cleaned.replace('Зарплата за мут', 'Мут:');
     return cleaned;
 };
 
 type TabType = 'OVERVIEW' | 'WALLET' | 'STATS';
 type TimeFilter = 'ALL' | 'WEEK' | 'DAY';
 type TypeFilter = 'ALL' | 'BAN' | 'MUTE' | 'CHECK';
+type WalletTimeFilter = 'ALL' | 'MONTH' | 'WEEK' | 'DAY';
 
-// --- FEATHER ICONS (https://feathericons.com/) ---
+// --- FEATHER ICONS ---
 const Icons = {
     Overview: () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>,
     Wallet: () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg>,
     Stats: () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>,
-    
-    // Stats Types
-    Ban: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"></polygon><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>, // Octagon X
-    Mute: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="1" y1="1" x2="23" y2="23"></line><path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"></path><path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>, // Mic Off
-    Check: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect><path d="M9 14l2 2 4-4"></path></svg>, // Clipboard Check
-    
-    // UI
+    Ban: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"></polygon><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>,
+    Mute: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="1" y1="1" x2="23" y2="23"></line><path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"></path><path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>,
+    Check: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect><path d="M9 14l2 2 4-4"></path></svg>,
     Edit: () => <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>,
     Close: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>,
     Clock: () => <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>,
     User: () => <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>,
     Inbox: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"></polyline><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"></path></svg>,
-
-    // Arrows
     ArrowUp: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg>,
-    ArrowDown: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><polyline points="19 12 12 19 5 12"></polyline></svg>
+    ArrowDown: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><polyline points="19 12 12 19 5 12"></polyline></svg>,
+    Search: () => <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>,
+    Alert: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
 };
 
 // --- COMPONENTS ---
@@ -93,6 +77,161 @@ const EmptyState = ({ label }: { label: string }) => (
         <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">{label}</span>
     </div>
 );
+
+// --- IMPROVED CHARTS ---
+const ActivityBarChart = ({ stats }: { stats: PlayerStats }) => {
+    // Generate last 7 days data
+    const data = useMemo(() => {
+        const days = [];
+        const bans = stats.bans || [];
+        const mutes = stats.mutes || [];
+        const checks = stats.checks || [];
+
+        for (let i = 6; i >= 0; i--) {
+            const d = new Date();
+            d.setDate(d.getDate() - i);
+            d.setHours(0,0,0,0);
+            const ts = d.getTime();
+            
+            // Count logic
+            const dayEnd = ts + 86400000;
+            const count = 
+                bans.filter(b => b.time >= ts && b.time < dayEnd).length +
+                mutes.filter(m => m.time >= ts && m.time < dayEnd).length +
+                checks.filter(c => c.date >= ts && c.date < dayEnd).length;
+                
+            days.push({ label: d.toLocaleDateString('ru-RU', {weekday: 'short'}), count });
+        }
+        return days;
+    }, [stats]);
+
+    const max = Math.max(...data.map(d => d.count), 5); // Minimum max is 5 to allow grid lines
+
+    return (
+        <div className="relative h-48 w-full">
+            {/* Background Grid Lines */}
+            <div className="absolute inset-0 flex flex-col justify-between text-[9px] text-gray-700 font-mono z-0 pointer-events-none">
+                <div className="border-b border-white/5 w-full h-px"></div>
+                <div className="border-b border-white/5 w-full h-px"></div>
+                <div className="border-b border-white/5 w-full h-px"></div>
+                <div className="border-b border-white/5 w-full h-px"></div>
+                <div className="border-b border-white/10 w-full h-px"></div> {/* Baseline */}
+            </div>
+
+            {/* Bars Container */}
+            <div className="absolute inset-0 flex items-end justify-between px-2 pt-4 pb-0 z-10">
+                {data.map((d, i) => {
+                    const percentage = Math.max((d.count / max) * 100, 2); // Min 2% height for visibility
+                    return (
+                        <div key={i} className="flex flex-col items-center flex-1 h-full justify-end group gap-2">
+                             {/* The Bar */}
+                             <div className="relative w-full max-w-[28px] h-full flex items-end">
+                                <div 
+                                    style={{ height: `${percentage}%` }} 
+                                    className={`
+                                        w-full rounded-t-sm transition-all duration-500 ease-out relative
+                                        bg-gradient-to-t from-purple-900/50 to-purple-500
+                                        group-hover:from-purple-600 group-hover:to-purple-400
+                                        group-hover:shadow-[0_0_15px_rgba(168,85,247,0.4)]
+                                        min-h-[4px]
+                                    `}
+                                >
+                                    {/* Tooltip */}
+                                    <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-[#1a1a1a] border border-white/10 text-white text-[10px] font-bold px-2 py-1 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap shadow-xl z-20 pointer-events-none transform translate-y-2 group-hover:translate-y-0">
+                                        {d.count} действий
+                                        <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-[#1a1a1a] border-b border-r border-white/10 rotate-45"></div>
+                                    </div>
+                                </div>
+                             </div>
+                             {/* Label */}
+                             <span className="text-[9px] font-bold uppercase text-gray-500 group-hover:text-gray-300 transition-colors">{d.label}</span>
+                        </div>
+                    );
+                })}
+            </div>
+        </div>
+    );
+};
+
+const DistributionChart = ({ stats }: { stats: PlayerStats }) => {
+    const bansCount = stats.bans?.length || 0;
+    const mutesCount = stats.mutes?.length || 0;
+    const checksCount = stats.checks?.length || 0;
+    const total = bansCount + mutesCount + checksCount;
+    
+    // Safety check
+    if (total === 0) {
+        return (
+            <div className="flex flex-col items-center justify-center h-48 w-full text-center">
+                <div className="w-16 h-16 rounded-full border-4 border-gray-800 border-dashed mb-2 animate-spin-slow opacity-20"></div>
+                <div className="text-[10px] text-gray-600 uppercase font-bold tracking-widest">Нет данных</div>
+            </div>
+        );
+    }
+
+    // Calculate degrees for conic gradient
+    const banDeg = (bansCount / total) * 360;
+    const muteDeg = (mutesCount / total) * 360;
+    // const checkDeg = (checksCount / total) * 360; // Not used in variable but implied
+
+    // CSS Conic Gradient logic
+    const gradient = `conic-gradient(
+        from 0deg,
+        #ef4444 0deg ${banDeg}deg,
+        #f97316 ${banDeg}deg ${banDeg + muteDeg}deg,
+        #3b82f6 ${banDeg + muteDeg}deg 360deg
+    )`;
+
+    return (
+        <div className="flex flex-col md:flex-row items-center justify-center gap-8 h-48 w-full">
+            
+            {/* The Donut */}
+            <div className="relative w-32 h-32 shrink-0 group">
+                {/* Glow Effect behind */}
+                <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-red-500/20 via-orange-500/20 to-blue-500/20 blur-xl opacity-50 group-hover:opacity-80 transition-opacity duration-500"></div>
+                
+                {/* The Chart */}
+                <div 
+                    className="w-full h-full rounded-full relative shadow-2xl transition-transform duration-500 group-hover:scale-105"
+                    style={{ background: gradient }}
+                >
+                    {/* Inner cutout to make it a donut */}
+                    <div className="absolute inset-4 bg-[#0A0A0A] rounded-full flex flex-col items-center justify-center z-10 border border-white/5">
+                        <span className="text-2xl font-black text-white leading-none">{total}</span>
+                        <span className="text-[8px] uppercase text-gray-500 tracking-widest mt-1 font-bold">Всего</span>
+                    </div>
+                </div>
+            </div>
+
+            {/* Legend */}
+            <div className="flex flex-col gap-3 min-w-[120px]">
+                <div className="flex items-center justify-between group cursor-default">
+                    <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]"></span>
+                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide group-hover:text-white transition-colors">Баны</span>
+                    </div>
+                    <span className="text-[10px] font-mono text-white opacity-60 group-hover:opacity-100">{bansCount}</span>
+                </div>
+                
+                <div className="flex items-center justify-between group cursor-default">
+                    <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-orange-500 shadow-[0_0_8px_rgba(249,115,22,0.5)]"></span>
+                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide group-hover:text-white transition-colors">Муты</span>
+                    </div>
+                    <span className="text-[10px] font-mono text-white opacity-60 group-hover:opacity-100">{mutesCount}</span>
+                </div>
+
+                <div className="flex items-center justify-between group cursor-default">
+                    <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]"></span>
+                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide group-hover:text-white transition-colors">Проверки</span>
+                    </div>
+                    <span className="text-[10px] font-mono text-white opacity-60 group-hover:opacity-100">{checksCount}</span>
+                </div>
+            </div>
+        </div>
+    );
+};
 
 const UserProfile: React.FC<UserProfileProps> = ({ member, currentUser, onBack, onUpdate, onShowToast }) => {
   const isOwner = member.user.id === currentUser.id;
@@ -106,6 +245,10 @@ const UserProfile: React.FC<UserProfileProps> = ({ member, currentUser, onBack, 
   const [timeFilter, setTimeFilter] = useState<TimeFilter>('ALL');
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('ALL');
 
+  // Wallet Filters
+  const [walletSearch, setWalletSearch] = useState('');
+  const [walletTimeFilter, setWalletTimeFilter] = useState<WalletTimeFilter>('ALL');
+
   // Data State
   const [stats, setStats] = useState<PlayerStats | null>(null);
   const [loadingStats, setLoadingStats] = useState(false);
@@ -117,7 +260,11 @@ const UserProfile: React.FC<UserProfileProps> = ({ member, currentUser, onBack, 
   const [withdrawIgn, setWithdrawIgn] = useState('');
   const [isWithdrawMode, setIsWithdrawMode] = useState(false);
   const [isProcessingTx, setIsProcessingTx] = useState(false);
+  
+  // Admin Confirm State
   const [adminAmount, setAdminAmount] = useState('');
+  const [adminAction, setAdminAction] = useState<{ type: 'ADMIN_ADD' | 'ADMIN_REMOVE', amount: string } | null>(null);
+  const [showAdminConfirm, setShowAdminConfirm] = useState(false);
 
   useEffect(() => {
     setDisplayedName(member.ign || member.nick || member.user.global_name || member.user.username);
@@ -176,18 +323,34 @@ const UserProfile: React.FC<UserProfileProps> = ({ member, currentUser, onBack, 
       finally { setIsProcessingTx(false); }
   };
 
-  const handleAdminManage = async (type: 'ADMIN_ADD' | 'ADMIN_REMOVE') => {
-      if (!isAdmin) return;
+  const initiateAdminAction = (type: 'ADMIN_ADD' | 'ADMIN_REMOVE') => {
+    if (!adminAmount || isNaN(parseInt(adminAmount)) || parseInt(adminAmount) <= 0) {
+        onShowToast("Введите корректную сумму", 'error');
+        return;
+    }
+    setAdminAction({ type, amount: adminAmount });
+    setShowAdminConfirm(true);
+  };
+
+  const confirmAdminAction = async () => {
+      if (!isAdmin || !adminAction) return;
       setIsProcessingTx(true);
       try {
           const res = await fetch(`${API_BASE_URL}/api/economy/admin/manage`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ adminId: currentUser.id, targetUserId: member.user.id, amount: adminAmount, type })
+              body: JSON.stringify({ 
+                  adminId: currentUser.id, 
+                  targetUserId: member.user.id, 
+                  amount: adminAction.amount, 
+                  type: adminAction.type 
+              })
           });
           if (res.ok) { 
               setAdminAmount(''); fetchEconomy(member.user.id); 
-              onShowToast(type === 'ADMIN_ADD' ? 'Средства выданы' : 'Средства сняты', 'success');
+              onShowToast(adminAction.type === 'ADMIN_ADD' ? 'Средства выданы' : 'Средства сняты', 'success');
+              setShowAdminConfirm(false);
+              setAdminAction(null);
           } 
           else { 
               const data = await res.json();
@@ -202,7 +365,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ member, currentUser, onBack, 
     try {
         await updateMemberIgn(member.user.id, ignInput);
         onUpdate();
-        onShowToast("Игровой ник обновлен", 'success');
+        onShowToast("Ник обновлен на сайте и в Discord", 'success');
     } catch (e) { onShowToast("Ошибка сохранения", 'error'); } 
   };
 
@@ -213,10 +376,10 @@ const UserProfile: React.FC<UserProfileProps> = ({ member, currentUser, onBack, 
   const getFilteredData = () => {
       if (!stats) return [];
       let combined = [
-          ...stats.bans.map(b => ({...b, type: 'BAN' as const, sort: b.time})),
-          ...stats.mutes.map(m => ({...m, type: 'MUTE' as const, sort: m.time})),
+          ...(stats.bans || []).map(b => ({...b, type: 'BAN' as const, sort: b.time})),
+          ...(stats.mutes || []).map(m => ({...m, type: 'MUTE' as const, sort: m.time})),
           // Store original Check type (Anydesk/Discord) in `checkMethod` and use generic `CHECK` type for filtering
-          ...stats.checks.map(c => ({...c, type: 'CHECK' as const, checkMethod: c.type, sort: c.date, time: c.date})) 
+          ...(stats.checks || []).map(c => ({...c, type: 'CHECK' as const, checkMethod: c.type, sort: c.date, time: c.date})) 
       ];
 
       const now = Date.now();
@@ -240,9 +403,9 @@ const UserProfile: React.FC<UserProfileProps> = ({ member, currentUser, onBack, 
   const getCount = (type: string) => {
       if (!stats) return 0;
       let list: any[] = [];
-      if (type === 'BAN') list = stats.bans;
-      if (type === 'MUTE') list = stats.mutes;
-      if (type === 'CHECK') list = stats.checks;
+      if (type === 'BAN') list = stats.bans || [];
+      if (type === 'MUTE') list = stats.mutes || [];
+      if (type === 'CHECK') list = stats.checks || [];
 
       const now = Date.now();
       return list.filter(item => {
@@ -253,12 +416,32 @@ const UserProfile: React.FC<UserProfileProps> = ({ member, currentUser, onBack, 
       }).length;
   };
 
-  const { withdrawals, incomes } = (() => {
-      const all = economy?.history || [];
+  const { withdrawals, incomes } = useMemo(() => {
+      let all = economy?.history || [];
+      
+      // Filter by Search
+      if (walletSearch) {
+          const lower = walletSearch.toLowerCase();
+          all = all.filter(t => 
+             (t.comment && t.comment.toLowerCase().includes(lower)) || 
+             t.amount.toString().includes(lower) || 
+             t.type.toLowerCase().includes(lower)
+          );
+      }
+
+      // Filter by Time
+      const now = Date.now();
+      all = all.filter(t => {
+          if (walletTimeFilter === 'DAY') return (now - t.date) <= 86400000;
+          if (walletTimeFilter === 'WEEK') return (now - t.date) <= 604800000;
+          if (walletTimeFilter === 'MONTH') return (now - t.date) <= 2592000000;
+          return true;
+      });
+
       const withdrawals = all.filter(t => t.type === 'WITHDRAW' || t.type === 'ADMIN_REMOVE');
       const incomes = all.filter(t => t.type !== 'WITHDRAW' && t.type !== 'ADMIN_REMOVE');
       return { withdrawals, incomes };
-  })();
+  }, [economy, walletSearch, walletTimeFilter]);
 
   return (
     <div className="min-h-screen bg-[#020202] text-white font-sans p-6 flex flex-col items-center">
@@ -448,17 +631,44 @@ const UserProfile: React.FC<UserProfileProps> = ({ member, currentUser, onBack, 
                                     onChange={e => setAdminAmount(e.target.value)}
                                     className="bg-[#050505] border border-white/10 rounded-lg px-4 py-2 text-sm text-white w-full outline-none focus:border-yellow-500/50"
                                 />
-                                <button onClick={() => handleAdminManage('ADMIN_ADD')} className="bg-emerald-900/30 text-emerald-400 border border-emerald-500/30 px-4 py-2 rounded-lg text-[10px] font-bold uppercase hover:bg-emerald-900/50 transition-colors whitespace-nowrap">
+                                <button onClick={() => initiateAdminAction('ADMIN_ADD')} className="bg-emerald-900/30 text-emerald-400 border border-emerald-500/30 px-4 py-2 rounded-lg text-[10px] font-bold uppercase hover:bg-emerald-900/50 transition-colors whitespace-nowrap">
                                     + Выдать
                                 </button>
-                                <button onClick={() => handleAdminManage('ADMIN_REMOVE')} className="bg-red-900/30 text-red-400 border border-red-500/30 px-4 py-2 rounded-lg text-[10px] font-bold uppercase hover:bg-red-900/50 transition-colors whitespace-nowrap">
+                                <button onClick={() => initiateAdminAction('ADMIN_REMOVE')} className="bg-red-900/30 text-red-400 border border-red-500/30 px-4 py-2 rounded-lg text-[10px] font-bold uppercase hover:bg-red-900/50 transition-colors whitespace-nowrap">
                                     - Забрать
                                 </button>
                             </div>
                         </div>
                     )}
+                    
+                    {/* 3. HISTORY FILTERS */}
+                    <div className="flex flex-col md:flex-row justify-between items-center gap-4 bg-[#0A0A0A] border border-white/5 p-2 rounded-2xl">
+                         <div className="relative w-full md:w-64">
+                             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-500">
+                                <Icons.Search />
+                             </div>
+                             <input 
+                                type="text"
+                                placeholder="Поиск по истории..."
+                                value={walletSearch}
+                                onChange={(e) => setWalletSearch(e.target.value)}
+                                className="bg-[#151515] border border-white/10 text-white text-xs rounded-xl block w-full pl-10 p-2.5 outline-none focus:border-purple-500/50 transition-colors"
+                             />
+                         </div>
+                         <div className="flex gap-1 bg-[#111] p-1 rounded-xl w-full md:w-auto overflow-x-auto">
+                            {(['ALL', 'MONTH', 'WEEK', 'DAY'] as const).map(t => (
+                                <button 
+                                    key={t}
+                                    onClick={() => setWalletTimeFilter(t)}
+                                    className={`px-4 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all whitespace-nowrap ${walletTimeFilter === t ? 'bg-white text-black shadow-lg' : 'text-gray-500 hover:text-white hover:bg-white/5'}`}
+                                >
+                                    {t === 'ALL' ? 'Все время' : t === 'MONTH' ? 'Месяц' : t === 'WEEK' ? 'Неделя' : 'День'}
+                                </button>
+                            ))}
+                         </div>
+                    </div>
 
-                    {/* 3. SPLIT HISTORY: WITHDRAWALS (LEFT) | INCOME (RIGHT) */}
+                    {/* 4. SPLIT HISTORY: WITHDRAWALS (LEFT) | INCOME (RIGHT) */}
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                         
                         {/* LEFT: Withdrawals */}
@@ -542,125 +752,154 @@ const UserProfile: React.FC<UserProfileProps> = ({ member, currentUser, onBack, 
                         </div>
                     </div>
 
-                    {/* KPI Cards */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <div className="bg-[#0A0A0A] border border-white/5 rounded-3xl p-6 relative overflow-hidden group">
-                            <div className="absolute right-[-20px] bottom-[-20px] text-[#111] group-hover:text-red-900/20 transition-colors transform group-hover:scale-110 duration-500 opacity-20">
-                                <div className="scale-[4]"><Icons.Ban /></div>
-                            </div>
-                            <h3 className="text-red-500 text-xs font-black uppercase tracking-widest mb-2 flex items-center gap-2">
-                                <Icons.Ban /> Банов
-                            </h3>
-                            <div className="text-5xl font-black text-white">{getCount('BAN')}</div>
+                    {loadingStats ? (
+                        <div className="flex flex-col items-center justify-center py-24">
+                             <div className="w-10 h-10 border-2 border-purple-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+                             <span className="text-gray-500 text-xs font-mono tracking-widest uppercase">Загрузка статистики...</span>
                         </div>
-
-                        <div className="bg-[#0A0A0A] border border-white/5 rounded-3xl p-6 relative overflow-hidden group">
-                             <div className="absolute right-[-20px] bottom-[-20px] text-[#111] group-hover:text-orange-900/20 transition-colors transform group-hover:scale-110 duration-500 opacity-20">
-                                <div className="scale-[4]"><Icons.Mute /></div>
-                            </div>
-                            <h3 className="text-orange-500 text-xs font-black uppercase tracking-widest mb-2 flex items-center gap-2">
-                                <Icons.Mute /> Мутов
-                            </h3>
-                            <div className="text-5xl font-black text-white">{getCount('MUTE')}</div>
+                    ) : !member.ign ? (
+                        <div className="bg-[#0A0A0A] border border-white/5 rounded-3xl p-12">
+                            <EmptyState label="Привяжите IGN в профиле для отображения статистики" />
                         </div>
-
-                         <div className="bg-[#0A0A0A] border border-white/5 rounded-3xl p-6 relative overflow-hidden group">
-                             <div className="absolute right-[-20px] bottom-[-20px] text-[#111] group-hover:text-blue-900/20 transition-colors transform group-hover:scale-110 duration-500 opacity-20">
-                                <div className="scale-[4]"><Icons.Check /></div>
-                            </div>
-                            <h3 className="text-blue-500 text-xs font-black uppercase tracking-widest mb-2 flex items-center gap-2">
-                                <Icons.Check /> Проверок
-                            </h3>
-                            <div className="text-5xl font-black text-white">{getCount('CHECK')}</div>
-                        </div>
-                    </div>
-
-                    {/* NEW CARD STYLE FEED */}
-                    <div className="flex flex-col gap-4">
-                        <div className="flex items-center justify-between px-2">
-                             <div className="text-gray-500 text-[10px] font-bold uppercase tracking-widest">Лента событий</div>
-                             <div className="text-gray-600 text-[10px] font-mono">{filteredHistory.length} записей</div>
-                        </div>
-
-                        {filteredHistory.length === 0 ? (
-                            <div className="bg-[#0A0A0A] border border-white/5 rounded-3xl p-8">
-                                <EmptyState label="Нет данных за выбранный период" />
-                            </div>
-                        ) : (
-                            filteredHistory.map((item, idx) => (
-                                <div key={idx} className="bg-[#0A0A0A] border border-white/5 rounded-2xl p-5 flex flex-col md:flex-row items-center gap-6 group hover:border-white/10 transition-colors shadow-lg">
-                                    
-                                    {/* Large Icon Box */}
-                                    <div className={`w-16 h-16 rounded-2xl flex items-center justify-center shrink-0 shadow-inner ${
-                                        item.type === 'BAN' ? 'bg-gradient-to-br from-red-500/10 to-red-900/10 text-red-500 border border-red-500/10' : 
-                                        item.type === 'MUTE' ? 'bg-gradient-to-br from-orange-500/10 to-orange-900/10 text-orange-500 border border-orange-500/10' : 
-                                        'bg-gradient-to-br from-blue-500/10 to-blue-900/10 text-blue-500 border border-blue-500/10'
-                                    }`}>
-                                        <div className="scale-125">
-                                            {item.type === 'BAN' ? <Icons.Ban /> : item.type === 'MUTE' ? <Icons.Mute /> : <Icons.Check />}
-                                        </div>
+                    ) : (
+                        <>
+                            {/* NEW: VISUAL CHARTS ROW */}
+                            {stats && (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div className="bg-[#0A0A0A] border border-white/5 rounded-3xl p-6">
+                                        <h3 className="text-gray-500 text-[10px] font-bold uppercase tracking-widest mb-6">Активность (7 дней)</h3>
+                                        <ActivityBarChart stats={stats} />
                                     </div>
-
-                                    {/* Content Info */}
-                                    <div className="flex-1 w-full text-center md:text-left">
-                                        <div className="flex flex-col md:flex-row md:items-center gap-2 mb-2">
-                                            <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded w-fit mx-auto md:mx-0 ${
-                                                item.type === 'BAN' ? 'bg-red-500/20 text-red-400' : 
-                                                item.type === 'MUTE' ? 'bg-orange-500/20 text-orange-400' : 
-                                                'bg-blue-500/20 text-blue-400'
-                                            }`}>
-                                                {item.type === 'BAN' ? 'Блокировка' : item.type === 'MUTE' ? 'Мут' : 'Проверка'}
-                                            </span>
-                                            <div className="text-[10px] text-gray-500 font-mono flex items-center justify-center md:justify-start gap-1">
-                                                <Icons.Clock /> {formatDate(item.time)}
-                                            </div>
-                                        </div>
-                                        
-                                        <div className="text-white font-bold text-lg mb-2">
-                                            {/* Fix for displaying proper check method (Anydesk/Discord) */}
-                                            {item.type === 'CHECK' ? (
-                                                <span>Проверка игрока <span className="text-blue-400">{item.target}</span></span>
-                                            ) : (
-                                                <span>{item.reason}</span>
-                                            )}
-                                        </div>
-                                        
-                                        {/* Meta Data Grid */}
-                                        <div className="flex flex-wrap justify-center md:justify-start gap-4 text-[11px] font-mono text-gray-400 bg-[#111] p-3 rounded-xl border border-white/5">
-                                             {item.type === 'CHECK' ? (
-                                                 <div className="flex items-center gap-2">
-                                                     <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
-                                                     {/* Use checkMethod which stores the original type (Anydesk/Discord) */}
-                                                     Метод: <span className="text-white font-bold uppercase">{item.checkMethod}</span>
-                                                 </div>
-                                             ) : (
-                                                 <>
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="w-1.5 h-1.5 rounded-full bg-gray-500"></span>
-                                                        Срок: <span className="text-white">{getDurationString(item.time, item.until)}</span>
-                                                    </div>
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="w-1.5 h-1.5 rounded-full bg-gray-500"></span>
-                                                        Истекает: <span className="text-white">{item.until <= 0 ? 'Никогда' : formatDate(item.until)}</span>
-                                                    </div>
-                                                    {!item.active && (
-                                                         <div className="flex items-center gap-2 text-emerald-400">
-                                                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-                                                            Снят: {item.removed_by_name || 'System'}
-                                                        </div>
-                                                    )}
-                                                 </>
-                                             )}
-                                             <div className="flex items-center gap-2 ml-auto border-l border-white/10 pl-4">
-                                                 <Icons.User />
-                                                 <span>Admin: {member.ign || 'Unknown'}</span>
-                                             </div>
+                                    <div className="bg-[#0A0A0A] border border-white/5 rounded-3xl p-6">
+                                        <h3 className="text-gray-500 text-[10px] font-bold uppercase tracking-widest mb-6">Распределение наказаний</h3>
+                                        <div className="flex justify-center">
+                                            <DistributionChart stats={stats} />
                                         </div>
                                     </div>
                                 </div>
-                            ))
-                        )}
-                    </div>
+                            )}
+
+                            {/* KPI Cards */}
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                <div className="bg-[#0A0A0A] border border-white/5 rounded-3xl p-6 relative overflow-hidden group">
+                                    <div className="absolute right-[-20px] bottom-[-20px] text-[#111] group-hover:text-red-900/20 transition-colors transform group-hover:scale-110 duration-500 opacity-20">
+                                        <div className="scale-[4]"><Icons.Ban /></div>
+                                    </div>
+                                    <h3 className="text-red-500 text-xs font-black uppercase tracking-widest mb-2 flex items-center gap-2">
+                                        <Icons.Ban /> Банов
+                                    </h3>
+                                    <div className="text-5xl font-black text-white">{getCount('BAN')}</div>
+                                </div>
+
+                                <div className="bg-[#0A0A0A] border border-white/5 rounded-3xl p-6 relative overflow-hidden group">
+                                    <div className="absolute right-[-20px] bottom-[-20px] text-[#111] group-hover:text-orange-900/20 transition-colors transform group-hover:scale-110 duration-500 opacity-20">
+                                        <div className="scale-[4]"><Icons.Mute /></div>
+                                    </div>
+                                    <h3 className="text-orange-500 text-xs font-black uppercase tracking-widest mb-2 flex items-center gap-2">
+                                        <Icons.Mute /> Мутов
+                                    </h3>
+                                    <div className="text-5xl font-black text-white">{getCount('MUTE')}</div>
+                                </div>
+
+                                <div className="bg-[#0A0A0A] border border-white/5 rounded-3xl p-6 relative overflow-hidden group">
+                                    <div className="absolute right-[-20px] bottom-[-20px] text-[#111] group-hover:text-blue-900/20 transition-colors transform group-hover:scale-110 duration-500 opacity-20">
+                                        <div className="scale-[4]"><Icons.Check /></div>
+                                    </div>
+                                    <h3 className="text-blue-500 text-xs font-black uppercase tracking-widest mb-2 flex items-center gap-2">
+                                        <Icons.Check /> Проверок
+                                    </h3>
+                                    <div className="text-5xl font-black text-white">{getCount('CHECK')}</div>
+                                </div>
+                            </div>
+
+                            {/* NEW CARD STYLE FEED */}
+                            <div className="flex flex-col gap-4">
+                                <div className="flex items-center justify-between px-2">
+                                    <div className="text-gray-500 text-[10px] font-bold uppercase tracking-widest">Лента событий</div>
+                                    <div className="text-gray-600 text-[10px] font-mono">{filteredHistory.length} записей</div>
+                                </div>
+
+                                {filteredHistory.length === 0 ? (
+                                    <div className="bg-[#0A0A0A] border border-white/5 rounded-3xl p-8">
+                                        <EmptyState label="Нет данных за выбранный период" />
+                                    </div>
+                                ) : (
+                                    filteredHistory.map((item, idx) => (
+                                        <div key={idx} className="bg-[#0A0A0A] border border-white/5 rounded-2xl p-5 flex flex-col md:flex-row items-center gap-6 group hover:border-white/10 transition-colors shadow-lg">
+                                            
+                                            {/* Large Icon Box */}
+                                            <div className={`w-16 h-16 rounded-2xl flex items-center justify-center shrink-0 shadow-inner ${
+                                                item.type === 'BAN' ? 'bg-gradient-to-br from-red-500/10 to-red-900/10 text-red-500 border border-red-500/10' : 
+                                                item.type === 'MUTE' ? 'bg-gradient-to-br from-orange-500/10 to-orange-900/10 text-orange-500 border border-orange-500/10' : 
+                                                'bg-gradient-to-br from-blue-500/10 to-blue-900/10 text-blue-500 border border-blue-500/10'
+                                            }`}>
+                                                <div className="scale-125">
+                                                    {item.type === 'BAN' ? <Icons.Ban /> : item.type === 'MUTE' ? <Icons.Mute /> : <Icons.Check />}
+                                                </div>
+                                            </div>
+
+                                            {/* Content Info */}
+                                            <div className="flex-1 w-full text-center md:text-left">
+                                                <div className="flex flex-col md:flex-row md:items-center gap-2 mb-2">
+                                                    <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded w-fit mx-auto md:mx-0 ${
+                                                        item.type === 'BAN' ? 'bg-red-500/20 text-red-400' : 
+                                                        item.type === 'MUTE' ? 'bg-orange-500/20 text-orange-400' : 
+                                                        'bg-blue-500/20 text-blue-400'
+                                                    }`}>
+                                                        {item.type === 'BAN' ? 'Блокировка' : item.type === 'MUTE' ? 'Мут' : 'Проверка'}
+                                                    </span>
+                                                    <div className="text-[10px] text-gray-500 font-mono flex items-center justify-center md:justify-start gap-1">
+                                                        <Icons.Clock /> {formatDate(item.time)}
+                                                    </div>
+                                                </div>
+                                                
+                                                <div className="text-white font-bold text-lg mb-2">
+                                                    {/* Fix for displaying proper check method (Anydesk/Discord) */}
+                                                    {item.type === 'CHECK' ? (
+                                                        <span>Проверка игрока <span className="text-blue-400">{item.target}</span></span>
+                                                    ) : (
+                                                        <span>{item.reason}</span>
+                                                    )}
+                                                </div>
+                                                
+                                                {/* Meta Data Grid */}
+                                                <div className="flex flex-wrap justify-center md:justify-start gap-4 text-[11px] font-mono text-gray-400 bg-[#111] p-3 rounded-xl border border-white/5">
+                                                    {item.type === 'CHECK' ? (
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+                                                            {/* Use checkMethod which stores the original type (Anydesk/Discord) */}
+                                                            Метод: <span className="text-white font-bold uppercase">{item.checkMethod}</span>
+                                                        </div>
+                                                    ) : (
+                                                        <>
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="w-1.5 h-1.5 rounded-full bg-gray-500"></span>
+                                                                Срок: <span className="text-white">{getDurationString(item.time, item.until)}</span>
+                                                            </div>
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="w-1.5 h-1.5 rounded-full bg-gray-500"></span>
+                                                                Истекает: <span className="text-white">{item.until <= 0 ? 'Никогда' : formatDate(item.until)}</span>
+                                                            </div>
+                                                            {!item.active && (
+                                                                <div className="flex items-center gap-2 text-emerald-400">
+                                                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                                                                    Снят: {item.removed_by_name || 'System'}
+                                                                </div>
+                                                            )}
+                                                        </>
+                                                    )}
+                                                    <div className="flex items-center gap-2 ml-auto border-l border-white/10 pl-4">
+                                                        <Icons.User />
+                                                        <span>Admin: {member.ign || 'Unknown'}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        </>
+                    )}
                 </div>
             )}
 
@@ -680,7 +919,19 @@ const UserProfile: React.FC<UserProfileProps> = ({ member, currentUser, onBack, 
                         <div className="space-y-4">
                             <div>
                                 <label className="text-[10px] font-bold text-gray-500 uppercase mb-2 block tracking-widest">Никнейм</label>
-                                <input type="text" value={withdrawIgn} onChange={(e) => setWithdrawIgn(e.target.value)} className="bg-[#151515] border border-white/10 w-full h-12 rounded-xl px-4 text-sm font-bold text-white outline-none focus:border-purple-500 transition-colors" placeholder="Steve" />
+                                <input 
+                                    type="text" 
+                                    value={withdrawIgn} 
+                                    onChange={(e) => {
+                                        const val = e.target.value;
+                                        // ALLOW ONLY LETTERS, NUMBERS, UNDERSCORE. NO SPACES.
+                                        if (/^[a-zA-Z0-9_]*$/.test(val)) {
+                                            setWithdrawIgn(val);
+                                        }
+                                    }}
+                                    className="bg-[#151515] border border-white/10 w-full h-12 rounded-xl px-4 text-sm font-bold text-white outline-none focus:border-purple-500 transition-colors" 
+                                    placeholder="Steve" 
+                                />
                             </div>
                             <div>
                                 <label className="text-[10px] font-bold text-gray-500 uppercase mb-2 block tracking-widest">Сумма (₪)</label>
@@ -693,6 +944,45 @@ const UserProfile: React.FC<UserProfileProps> = ({ member, currentUser, onBack, 
                         </div>
                     </div>
                  </div>
+            )}
+
+            {/* --- ADMIN CONFIRM MODAL --- */}
+            {showAdminConfirm && adminAction && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-fade-in">
+                    <div className="bg-[#0f0f0f] border border-yellow-500/20 rounded-3xl p-8 w-full max-w-sm shadow-2xl relative">
+                        <div className="mb-6 text-center">
+                            <div className="w-12 h-12 rounded-full bg-yellow-500/10 text-yellow-500 flex items-center justify-center mx-auto mb-4">
+                                <Icons.Alert />
+                            </div>
+                            <h3 className="text-xl font-black text-white uppercase tracking-tight">Подтверждение</h3>
+                            <p className="text-xs text-gray-500 mt-2 leading-relaxed">
+                                Вы собираетесь {adminAction.type === 'ADMIN_ADD' ? 'выдать' : 'снять'} средства.
+                            </p>
+                        </div>
+
+                        <div className="bg-[#151515] rounded-xl p-4 mb-6 border border-white/5 space-y-2">
+                             <div className="flex justify-between text-xs">
+                                 <span className="text-gray-500">Сотрудник:</span>
+                                 <span className="text-white font-bold">{member.ign || member.user.username}</span>
+                             </div>
+                             <div className="flex justify-between text-xs">
+                                 <span className="text-gray-500">Сумма:</span>
+                                 <span className={`font-mono font-bold ${adminAction.type === 'ADMIN_ADD' ? 'text-emerald-400' : 'text-red-400'}`}>
+                                    {adminAction.type === 'ADMIN_ADD' ? '+' : '-'}{adminAction.amount} ₪
+                                 </span>
+                             </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3">
+                            <button onClick={() => setShowAdminConfirm(false)} className="h-11 rounded-xl bg-white/5 hover:bg-white/10 text-gray-400 text-[10px] font-bold uppercase tracking-widest transition-colors">
+                                Отмена
+                            </button>
+                            <ModernButton onClick={confirmAdminAction} isLoading={isProcessingTx} className="h-11 rounded-xl">
+                                Подтвердить
+                            </ModernButton>
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
     </div>
