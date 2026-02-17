@@ -723,174 +723,6 @@ const UserProfile: React.FC<UserProfileProps> = ({ member, currentUser, onBack, 
                 </div>
             )}
 
-            {/* === STATS === */}
-            {activeTab === 'STATS' && (
-                <div className="flex flex-col gap-8">
-                    
-                    {/* Filters */}
-                    <div className="flex flex-col md:flex-row justify-between items-center gap-4 bg-[#0A0A0A] border border-white/5 p-1.5 rounded-2xl">
-                        <div className="flex gap-1 bg-[#111] p-1 rounded-xl w-full md:w-auto overflow-x-auto">
-                            {(['ALL', 'BAN', 'MUTE', 'CHECK'] as const).map(t => (
-                                <button 
-                                    key={t}
-                                    onClick={() => setTypeFilter(t)}
-                                    className={`px-6 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all whitespace-nowrap ${typeFilter === t ? 'bg-white text-black shadow-lg' : 'text-gray-500 hover:text-white hover:bg-white/5'}`}
-                                >
-                                    {t === 'ALL' ? 'Все' : t === 'BAN' ? 'Баны' : t === 'MUTE' ? 'Муты' : 'Проверки'}
-                                </button>
-                            ))}
-                        </div>
-                        <div className="flex gap-1 bg-[#111] p-1 rounded-xl w-full md:w-auto overflow-x-auto">
-                            {(['ALL', 'WEEK', 'DAY'] as const).map(t => (
-                                <button 
-                                    key={t}
-                                    onClick={() => setTimeFilter(t)}
-                                    className={`px-4 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all whitespace-nowrap ${timeFilter === t ? 'bg-purple-600 text-white shadow-lg' : 'text-gray-500 hover:text-white hover:bg-white/5'}`}
-                                >
-                                    {t === 'ALL' ? 'Все время' : t === 'WEEK' ? 'Неделя' : '24 Часа'}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* NEW: VISUAL CHARTS ROW */}
-                    {stats && (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div className="bg-[#0A0A0A] border border-white/5 rounded-3xl p-6">
-                                <h3 className="text-gray-500 text-[10px] font-bold uppercase tracking-widest mb-6">Активность (7 дней)</h3>
-                                <ActivityBarChart stats={stats} />
-                            </div>
-                            <div className="bg-[#0A0A0A] border border-white/5 rounded-3xl p-6">
-                                <h3 className="text-gray-500 text-[10px] font-bold uppercase tracking-widest mb-6">Распределение наказаний</h3>
-                                <div className="flex justify-center">
-                                    <DistributionChart stats={stats} />
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* KPI Cards */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <div className="bg-[#0A0A0A] border border-white/5 rounded-3xl p-6 relative overflow-hidden group">
-                            <div className="absolute right-[-20px] bottom-[-20px] text-[#111] group-hover:text-red-900/20 transition-colors transform group-hover:scale-110 duration-500 opacity-20">
-                                <div className="scale-[4]"><Icons.Ban /></div>
-                            </div>
-                            <h3 className="text-red-500 text-xs font-black uppercase tracking-widest mb-2 flex items-center gap-2">
-                                <Icons.Ban /> Банов
-                            </h3>
-                            <div className="text-5xl font-black text-white">{getCount('BAN')}</div>
-                        </div>
-
-                        <div className="bg-[#0A0A0A] border border-white/5 rounded-3xl p-6 relative overflow-hidden group">
-                             <div className="absolute right-[-20px] bottom-[-20px] text-[#111] group-hover:text-orange-900/20 transition-colors transform group-hover:scale-110 duration-500 opacity-20">
-                                <div className="scale-[4]"><Icons.Mute /></div>
-                            </div>
-                            <h3 className="text-orange-500 text-xs font-black uppercase tracking-widest mb-2 flex items-center gap-2">
-                                <Icons.Mute /> Мутов
-                            </h3>
-                            <div className="text-5xl font-black text-white">{getCount('MUTE')}</div>
-                        </div>
-
-                         <div className="bg-[#0A0A0A] border border-white/5 rounded-3xl p-6 relative overflow-hidden group">
-                             <div className="absolute right-[-20px] bottom-[-20px] text-[#111] group-hover:text-blue-900/20 transition-colors transform group-hover:scale-110 duration-500 opacity-20">
-                                <div className="scale-[4]"><Icons.Check /></div>
-                            </div>
-                            <h3 className="text-blue-500 text-xs font-black uppercase tracking-widest mb-2 flex items-center gap-2">
-                                <Icons.Check /> Проверок
-                            </h3>
-                            <div className="text-5xl font-black text-white">{getCount('CHECK')}</div>
-                        </div>
-                    </div>
-
-                    {/* NEW CARD STYLE FEED */}
-                    <div className="flex flex-col gap-4">
-                        <div className="flex items-center justify-between px-2">
-                             <div className="text-gray-500 text-[10px] font-bold uppercase tracking-widest">Лента событий</div>
-                             <div className="text-gray-600 text-[10px] font-mono">{filteredHistory.length} записей</div>
-                        </div>
-
-                        {filteredHistory.length === 0 ? (
-                            <div className="bg-[#0A0A0A] border border-white/5 rounded-3xl p-8">
-                                <EmptyState label="Нет данных за выбранный период" />
-                            </div>
-                        ) : (
-                            filteredHistory.map((item, idx) => (
-                                <div key={idx} className="bg-[#0A0A0A] border border-white/5 rounded-2xl p-5 flex flex-col md:flex-row items-center gap-6 group hover:border-white/10 transition-colors shadow-lg">
-                                    
-                                    {/* Large Icon Box */}
-                                    <div className={`w-16 h-16 rounded-2xl flex items-center justify-center shrink-0 shadow-inner ${
-                                        item.type === 'BAN' ? 'bg-gradient-to-br from-red-500/10 to-red-900/10 text-red-500 border border-red-500/10' : 
-                                        item.type === 'MUTE' ? 'bg-gradient-to-br from-orange-500/10 to-orange-900/10 text-orange-500 border border-orange-500/10' : 
-                                        'bg-gradient-to-br from-blue-500/10 to-blue-900/10 text-blue-500 border border-blue-500/10'
-                                    }`}>
-                                        <div className="scale-125">
-                                            {item.type === 'BAN' ? <Icons.Ban /> : item.type === 'MUTE' ? <Icons.Mute /> : <Icons.Check />}
-                                        </div>
-                                    </div>
-
-                                    {/* Content Info */}
-                                    <div className="flex-1 w-full text-center md:text-left">
-                                        <div className="flex flex-col md:flex-row md:items-center gap-2 mb-2">
-                                            <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded w-fit mx-auto md:mx-0 ${
-                                                item.type === 'BAN' ? 'bg-red-500/20 text-red-400' : 
-                                                item.type === 'MUTE' ? 'bg-orange-500/20 text-orange-400' : 
-                                                'bg-blue-500/20 text-blue-400'
-                                            }`}>
-                                                {item.type === 'BAN' ? 'Блокировка' : item.type === 'MUTE' ? 'Мут' : 'Проверка'}
-                                            </span>
-                                            <div className="text-[10px] text-gray-500 font-mono flex items-center justify-center md:justify-start gap-1">
-                                                <Icons.Clock /> {formatDate(item.time)}
-                                            </div>
-                                        </div>
-                                        
-                                        <div className="text-white font-bold text-lg mb-2">
-                                            {/* Fix for displaying proper check method (Anydesk/Discord) */}
-                                            {item.type === 'CHECK' ? (
-                                                <span>Проверка игрока <span className="text-blue-400">{item.target}</span></span>
-                                            ) : (
-                                                <span>{item.reason}</span>
-                                            )}
-                                        </div>
-                                        
-                                        {/* Meta Data Grid */}
-                                        <div className="flex flex-wrap justify-center md:justify-start gap-4 text-[11px] font-mono text-gray-400 bg-[#111] p-3 rounded-xl border border-white/5">
-                                             {item.type === 'CHECK' ? (
-                                                 <div className="flex items-center gap-2">
-                                                     <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
-                                                     {/* Use checkMethod which stores the original type (Anydesk/Discord) */}
-                                                     Метод: <span className="text-white font-bold uppercase">{item.checkMethod}</span>
-                                                 </div>
-                                             ) : (
-                                                 <>
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="w-1.5 h-1.5 rounded-full bg-gray-500"></span>
-                                                        Срок: <span className="text-white">{getDurationString(item.time, item.until)}</span>
-                                                    </div>
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="w-1.5 h-1.5 rounded-full bg-gray-500"></span>
-                                                        Истекает: <span className="text-white">{item.until <= 0 ? 'Никогда' : formatDate(item.until)}</span>
-                                                    </div>
-                                                    {!item.active && (
-                                                         <div className="flex items-center gap-2 text-emerald-400">
-                                                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-                                                            Снят: {item.removed_by_name || 'System'}
-                                                        </div>
-                                                    )}
-                                                 </>
-                                             )}
-                                             <div className="flex items-center gap-2 ml-auto border-l border-white/10 pl-4">
-                                                 <Icons.User />
-                                                 <span>Admin: {member.ign || 'Unknown'}</span>
-                                             </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            ))
-                        )}
-                    </div>
-                </div>
-            )}
-
             {/* --- WITHDRAW MODAL --- */}
             {isWithdrawMode && (
                  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-fade-in">
@@ -907,7 +739,19 @@ const UserProfile: React.FC<UserProfileProps> = ({ member, currentUser, onBack, 
                         <div className="space-y-4">
                             <div>
                                 <label className="text-[10px] font-bold text-gray-500 uppercase mb-2 block tracking-widest">Никнейм</label>
-                                <input type="text" value={withdrawIgn} onChange={(e) => setWithdrawIgn(e.target.value)} className="bg-[#151515] border border-white/10 w-full h-12 rounded-xl px-4 text-sm font-bold text-white outline-none focus:border-purple-500 transition-colors" placeholder="Steve" />
+                                <input 
+                                    type="text" 
+                                    value={withdrawIgn} 
+                                    onChange={(e) => {
+                                        const val = e.target.value;
+                                        // ALLOW ONLY LETTERS, NUMBERS, UNDERSCORE. NO SPACES.
+                                        if (/^[a-zA-Z0-9_]*$/.test(val)) {
+                                            setWithdrawIgn(val);
+                                        }
+                                    }}
+                                    className="bg-[#151515] border border-white/10 w-full h-12 rounded-xl px-4 text-sm font-bold text-white outline-none focus:border-purple-500 transition-colors" 
+                                    placeholder="Steve" 
+                                />
                             </div>
                             <div>
                                 <label className="text-[10px] font-bold text-gray-500 uppercase mb-2 block tracking-widest">Сумма (₪)</label>

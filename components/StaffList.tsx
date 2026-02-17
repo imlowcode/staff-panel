@@ -226,8 +226,8 @@ const StaffList: React.FC<StaffListProps> = ({ currentUser, onLogout, onSelectUs
                                             onClick={() => onSelectUser(member)}
                                             className="group relative bg-[#0A0A0A] border border-white/5 hover:border-white/10 rounded-2xl p-0 text-left transition-all duration-300 hover:-translate-y-1 hover:shadow-xl overflow-hidden flex flex-col items-center active:scale-[0.98] active:opacity-90 active:border-purple-500/50"
                                         >
-                                            {/* Top Background Gradient */}
-                                            <div className={`absolute top-0 w-full h-24 bg-gradient-to-b ${roleDef.color} opacity-10 group-hover:opacity-20 transition-opacity`}></div>
+                                            {/* Full Background Gradient Tint */}
+                                            <div className={`absolute inset-0 bg-gradient-to-b ${roleDef.color} opacity-5 group-hover:opacity-10 transition-opacity`}></div>
                                             
                                             {/* Avatar / Skin Container */}
                                             <div className="relative mt-6 mb-4">
