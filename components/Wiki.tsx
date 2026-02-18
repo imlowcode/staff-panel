@@ -304,6 +304,7 @@ const Wiki: React.FC<WikiProps> = ({ currentMember }) => {
                             {/* Step 1: Trainee -> JrMod */}
                             <div className="relative pl-8">
                                 <div className={`absolute -left-[9px] top-0 w-4 h-4 rounded-full border-2 transition-all duration-500 z-10 ${userLevel >= 0 ? 'bg-emerald-500 border-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]' : 'bg-[#111] border-gray-700'}`}></div>
+                                {/* LINE: Green if active, always thin */}
                                 <div className={`absolute left-[-1px] top-4 w-[2px] h-[calc(100%+48px)] transition-all duration-700 ${userLevel >= 1 ? 'bg-emerald-500' : 'bg-transparent'}`}></div>
                                 
                                 <h3 className={`text-lg font-bold mb-1 ${userLevel >= 0 ? 'text-white' : 'text-gray-500'}`}>Trainee <span className="text-gray-600 mx-2">→</span> Junior Moderator</h3>
@@ -318,7 +319,8 @@ const Wiki: React.FC<WikiProps> = ({ currentMember }) => {
                              {/* Step 2: JrMod -> Moderator */}
                              <div className="relative pl-8">
                                 <div className={`absolute -left-[9px] top-0 w-4 h-4 rounded-full border-2 transition-all duration-500 z-10 ${userLevel >= 1 ? 'bg-blue-500 border-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.5)]' : 'bg-[#111] border-gray-700'}`}></div>
-                                <div className={`absolute left-[-1px] top-4 w-[2px] h-[calc(100%+48px)] transition-all duration-700 ${userLevel >= 2 ? 'bg-blue-500' : 'bg-transparent'}`}></div>
+                                {/* LINE: Green if active, always thin */}
+                                <div className={`absolute left-[-1px] top-4 w-[2px] h-[calc(100%+48px)] transition-all duration-700 ${userLevel >= 2 ? 'bg-emerald-500' : 'bg-transparent'}`}></div>
 
                                 <h3 className={`text-lg font-bold mb-1 ${userLevel >= 1 ? 'text-white' : 'text-gray-500'}`}>Junior Moderator <span className="text-gray-600 mx-2">→</span> Moderator</h3>
                                 <div className={`bg-[#111] border p-4 rounded-xl mt-3 space-y-2 transition-colors ${userLevel >= 1 ? 'border-blue-500/30' : 'border-white/5 opacity-50'}`}>
@@ -334,7 +336,8 @@ const Wiki: React.FC<WikiProps> = ({ currentMember }) => {
                             {/* Step 3: Moderator -> Senior */}
                             <div className="relative pl-8">
                                 <div className={`absolute -left-[9px] top-0 w-4 h-4 rounded-full border-2 transition-all duration-500 z-10 ${userLevel >= 2 ? 'bg-purple-500 border-purple-500 shadow-[0_0_10px_rgba(168,85,247,0.5)]' : 'bg-[#111] border-gray-700'}`}></div>
-                                <div className={`absolute left-[-1px] top-4 w-[2px] h-[calc(100%+48px)] transition-all duration-700 ${userLevel >= 3 ? 'bg-purple-500' : 'bg-transparent'}`}></div>
+                                {/* LINE: Green if active, always thin */}
+                                <div className={`absolute left-[-1px] top-4 w-[2px] h-[calc(100%+48px)] transition-all duration-700 ${userLevel >= 3 ? 'bg-emerald-500' : 'bg-transparent'}`}></div>
 
                                 <h3 className={`text-lg font-bold mb-1 ${userLevel >= 2 ? 'text-white' : 'text-gray-500'}`}>Moderator <span className="text-gray-600 mx-2">→</span> Senior Moderator</h3>
                                 <div className={`bg-[#111] border p-4 rounded-xl mt-3 space-y-2 transition-colors ${userLevel >= 2 ? 'border-purple-500/30' : 'border-white/5 opacity-50'}`}>
