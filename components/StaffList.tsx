@@ -102,7 +102,15 @@ const StaffList: React.FC<StaffListProps> = ({ currentUser, onLogout, onSelectUs
       <div className="w-full max-w-7xl bg-[#0A0A0A] rounded-3xl border border-white/5 p-6 flex flex-col md:flex-row items-center justify-between gap-6 mb-8 shadow-2xl relative z-10">
             {/* Brand */}
             <div className="flex items-center gap-4 pl-2">
-               <img src="/logo/Nullx.png" alt="NullX" className="h-10 w-auto object-contain" />
+               <img 
+                  src="logo/Nullx.png" 
+                  alt="NullX" 
+                  className="h-10 w-auto object-contain"
+                  onError={(e) => {
+                    e.currentTarget.style.display = 'none';
+                    e.currentTarget.parentElement?.insertAdjacentHTML('beforeend', '<span class="text-xl font-black tracking-tighter text-white">NULLX</span>');
+                  }} 
+               />
             </div>
 
             {/* Search & Actions */}
@@ -254,7 +262,7 @@ const StaffList: React.FC<StaffListProps> = ({ currentUser, onLogout, onSelectUs
                                             <div className="w-full bg-[#111] p-4 pt-6 mt-auto border-t border-white/5 relative">
                                                 {/* Role Badge floating up */}
                                                 <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                                                    <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider border bg-[#0A0A0A] ${roleDef.badgeBg.replace('bg-opacity-20', '')} shadow-sm`}>
+                                                    <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider border bg-[#0A0A0A] ${roleDef.badgeBg.replace('bg-opacity-20', '')} shadow-sm whitespace-nowrap`}>
                                                         {roleDef.name}
                                                     </span>
                                                 </div>

@@ -24,7 +24,15 @@ const LoginScreen: React.FC = () => {
             {/* Header / Logo */}
             <div className="mb-12 relative group cursor-default">
                 <div className="absolute -inset-4 bg-purple-500/30 blur-xl rounded-full opacity-50 group-hover:opacity-75 transition-opacity duration-500"></div>
-                <img src="/logo/Nullx.png" alt="NullX" className="relative h-16 w-auto object-contain drop-shadow-[0_0_15px_rgba(255,255,255,0.3)]" />
+                <img 
+                  src="logo/Nullx.png" 
+                  alt="NullX" 
+                  className="relative h-16 w-auto object-contain drop-shadow-[0_0_15px_rgba(255,255,255,0.3)]"
+                  onError={(e) => {
+                    e.currentTarget.style.display = 'none';
+                    e.currentTarget.parentElement?.insertAdjacentHTML('beforeend', '<span class="relative text-3xl font-black tracking-tighter text-white">NULLX</span>');
+                  }} 
+                />
                 <div className="mt-4 flex items-center justify-center gap-3 opacity-60">
                    <div className="h-px w-8 bg-gradient-to-r from-transparent via-white to-transparent"></div>
                    <p className="text-[10px] font-mono text-purple-200 uppercase tracking-[0.4em] drop-shadow-md">Панель Персонала</p>
