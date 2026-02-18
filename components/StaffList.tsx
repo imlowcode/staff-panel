@@ -101,14 +101,8 @@ const StaffList: React.FC<StaffListProps> = ({ currentUser, onLogout, onSelectUs
       {/* --- HEADER PANEL --- */}
       <div className="w-full max-w-7xl bg-[#0A0A0A] rounded-3xl border border-white/5 p-6 flex flex-col md:flex-row items-center justify-between gap-6 mb-8 shadow-2xl relative z-10">
             {/* Brand */}
-            <div className="flex items-center gap-4">
-               <div className="w-12 h-12 bg-gradient-to-br from-purple-600 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-purple-900/20">
-                    <span className="text-xl font-black text-white">N</span>
-               </div>
-               <div>
-                   <h1 className="text-2xl font-black tracking-tighter text-white">NULLX</h1>
-                   <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-500">Staff Control Panel</p>
-               </div>
+            <div className="flex items-center gap-4 pl-2">
+               <img src="/logo/Nullx.png" alt="NullX" className="h-10 w-auto object-contain" />
             </div>
 
             {/* Search & Actions */}
@@ -159,23 +153,31 @@ const StaffList: React.FC<StaffListProps> = ({ currentUser, onLogout, onSelectUs
       <div className="w-full max-w-7xl relative z-10 flex flex-col gap-8">
             
             {/* KPI ROW */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                  {/* Total Staff */}
-                 <div className="bg-[#0A0A0A] border border-white/5 rounded-3xl p-6 relative overflow-hidden group">
-                     <div className="absolute right-0 top-0 p-6 text-[#151515] group-hover:text-[#1a1a1a] transition-colors">
-                        <Icons.Users />
+                 <div className="bg-[#0A0A0A] border border-white/5 rounded-2xl p-5 relative overflow-hidden group flex items-center justify-between max-w-lg mx-auto w-full">
+                     <div className="relative z-10">
+                        <h3 className="text-purple-500 text-[9px] font-black uppercase tracking-widest mb-1">Всего персонала</h3>
+                        <div className="text-3xl font-black text-white">{loading ? "-" : totalStaff}</div>
                      </div>
-                     <h3 className="text-purple-500 text-[10px] font-black uppercase tracking-widest mb-1">Всего персонала</h3>
-                     <div className="text-4xl font-black text-white">{loading ? "-" : totalStaff}</div>
+                     <div className="text-[#151515] group-hover:text-[#1a1a1a] transition-colors transform group-hover:scale-110 duration-500">
+                        <div className="scale-[2.0] origin-right mr-4">
+                            <Icons.Users />
+                        </div>
+                     </div>
                  </div>
 
                  {/* Admins */}
-                 <div className="bg-[#0A0A0A] border border-white/5 rounded-3xl p-6 relative overflow-hidden group">
-                     <div className="absolute right-0 top-0 p-6 text-[#151515] group-hover:text-[#1a1a1a] transition-colors">
-                        <Icons.Shield />
+                 <div className="bg-[#0A0A0A] border border-white/5 rounded-2xl p-5 relative overflow-hidden group flex items-center justify-between max-w-lg mx-auto w-full">
+                     <div className="relative z-10">
+                        <h3 className="text-blue-500 text-[9px] font-black uppercase tracking-widest mb-1">Администраторы</h3>
+                        <div className="text-3xl font-black text-white">{loading ? "-" : adminCount}</div>
                      </div>
-                     <h3 className="text-blue-500 text-[10px] font-black uppercase tracking-widest mb-1">Администраторы</h3>
-                     <div className="text-4xl font-black text-white">{loading ? "-" : adminCount}</div>
+                     <div className="text-[#151515] group-hover:text-[#1a1a1a] transition-colors transform group-hover:scale-110 duration-500">
+                        <div className="scale-[2.0] origin-right mr-4">
+                            <Icons.Shield />
+                        </div>
+                     </div>
                  </div>
             </div>
 

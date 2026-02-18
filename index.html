@@ -17,7 +17,7 @@
         theme: {
           extend: {
             fontFamily: {
-              sans: ['Inter', 'sans-serif'],
+              sans: ['Unbounded', 'Inter', 'sans-serif'], // Set Unbounded as default
               mono: ['JetBrains Mono', 'monospace'],
             },
             animation: {
@@ -25,6 +25,7 @@
               'fade-in': 'fadeIn 0.5s ease-out forwards',
               'slide-up': 'slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards',
               'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+              'text-shimmer': 'textShimmer 2.5s ease-out infinite alternate',
             },
             keyframes: {
               blob: {
@@ -40,6 +41,10 @@
               slideUp: {
                 '0%': { opacity: '0', transform: 'translateY(20px)' },
                 '100%': { opacity: '1', transform: 'translateY(0)' },
+              },
+              textShimmer: {
+                '0%': { 'background-position': '0% 50%' },
+                '100%': { 'background-position': '100% 50%' }
               }
             }
           }
@@ -47,10 +52,18 @@
       }
     </script>
     <style>
+      /* Register Custom Font */
+      @font-face {
+        font-family: 'Unbounded';
+        src: url('/fonts/Unbounded-SemiBold.ttf') format('truetype');
+        font-weight: 600;
+        font-style: normal;
+      }
+
       body {
         background-color: #020202;
         color: #e5e5e5;
-        font-family: 'Inter', sans-serif;
+        font-family: 'Unbounded', sans-serif; /* Apply globally */
         overflow-x: hidden;
       }
       

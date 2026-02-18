@@ -537,36 +537,39 @@ const UserProfile: React.FC<UserProfileProps> = ({ member, currentUser, onBack, 
                             </div>
                         </div>
 
-                        {/* Extra Grid - Consolidated Cards */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 flex-1">
-                             <div className="bg-[#0A0A0A] border border-white/5 rounded-3xl p-6 flex flex-col justify-center">
-                                 <h3 className="text-gray-500 text-xs font-bold uppercase tracking-widest mb-4 flex items-center gap-2">
-                                    <Icons.Edit /> Управление профилем
+                        {/* Merged Info/Manage Card - Less Space */}
+                        <div className="bg-[#0A0A0A] border border-white/5 rounded-3xl p-5 flex-1 flex flex-col md:flex-row gap-6">
+                             {/* Manage Section */}
+                             <div className="flex-1 flex flex-col">
+                                 <h3 className="text-gray-500 text-[10px] font-bold uppercase tracking-widest mb-4 flex items-center gap-2">
+                                    <Icons.Edit /> Управление
                                  </h3>
-                                 <div className="space-y-3">
-                                     <div>
-                                         <label className="text-[10px] text-gray-600 uppercase font-bold block mb-1">Minecraft IGN</label>
-                                         <div className="flex gap-2">
-                                             <input 
-                                                 value={ignInput}
-                                                 onChange={(e) => setIgnInput(e.target.value)}
-                                                 disabled={!isAdmin}
-                                                 className="bg-[#151515] border border-white/10 rounded-lg px-3 py-2 text-xs text-white w-full outline-none focus:border-purple-500 transition-colors disabled:opacity-50"
-                                             />
-                                             {isAdmin && (
-                                                 <button onClick={handleSaveIgn} className="bg-purple-600 hover:bg-purple-500 text-white px-3 rounded-lg text-xs font-bold transition-colors">OK</button>
-                                             )}
-                                         </div>
-                                     </div>
+                                 <div className="flex-1 flex flex-col justify-center">
+                                    <label className="text-[9px] text-gray-600 uppercase font-bold block mb-2">Minecraft IGN</label>
+                                    <div className="flex gap-2">
+                                        <input 
+                                            value={ignInput}
+                                            onChange={(e) => setIgnInput(e.target.value)}
+                                            disabled={!isAdmin}
+                                            className="bg-[#111] border border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-white w-full outline-none focus:border-purple-500/50 focus:bg-[#151515] transition-all disabled:opacity-50 placeholder-gray-700"
+                                            placeholder="Steve"
+                                        />
+                                        {isAdmin && (
+                                            <button onClick={handleSaveIgn} className="bg-purple-600 hover:bg-purple-500 text-white px-5 rounded-xl text-xs font-bold transition-colors shadow-lg shadow-purple-900/20">OK</button>
+                                        )}
+                                    </div>
                                  </div>
                              </div>
+
+                             {/* Vertical Divider (Hidden on mobile) */}
+                             <div className="hidden md:block w-px bg-white/5 my-2"></div>
                              
-                             {/* Account Info Card - More Compact */}
-                             <div className="bg-[#0A0A0A] border border-white/5 rounded-3xl p-6 flex flex-col justify-center">
-                                 <h3 className="text-gray-500 text-xs font-bold uppercase tracking-widest mb-4">
+                             {/* Info Section */}
+                             <div className="flex-1 flex flex-col">
+                                 <h3 className="text-gray-500 text-[10px] font-bold uppercase tracking-widest mb-4">
                                      Информация
                                  </h3>
-                                 <div className="space-y-2">
+                                 <div className="space-y-3 flex-1 flex flex-col justify-center">
                                      <div className="flex justify-between items-center pb-2 border-b border-white/5">
                                          <span className="text-gray-500 text-[10px] font-bold">Роль</span>
                                          <span className={`text-[10px] font-mono px-2 py-0.5 rounded ${roleDef?.badgeBg || 'bg-gray-800'}`}>{roleDef?.name || 'User'}</span>
@@ -577,7 +580,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ member, currentUser, onBack, 
                                      </div>
                                      <div className="flex justify-between items-center">
                                          <span className="text-gray-500 text-[10px] font-bold">Статус</span>
-                                         <span className="text-emerald-500 text-[10px] font-bold uppercase">Активен</span>
+                                         <span className="text-emerald-500 text-[10px] font-bold uppercase tracking-wider">Активен</span>
                                      </div>
                                  </div>
                              </div>
@@ -598,10 +601,14 @@ const UserProfile: React.FC<UserProfileProps> = ({ member, currentUser, onBack, 
                          <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-overlay"></div>
                          
                          <div className="relative z-10">
-                            <h3 className="text-white/40 text-xs font-black uppercase tracking-[0.3em] mb-4">Текущий Баланс</h3>
-                            <div className="text-7xl md:text-8xl font-black text-white tracking-tighter drop-shadow-2xl mb-8 flex items-start justify-center">
-                                {loadingEconomy ? "..." : economy?.balance.toLocaleString()}
-                                <span className="text-4xl md:text-5xl text-gray-500 font-medium ml-2 relative top-2">₪</span>
+                            <h3 className="text-white/40 text-[10px] font-black uppercase tracking-[0.3em] mb-4">Текущий Баланс</h3>
+                            
+                            <div className="relative flex items-center justify-center mb-10">
+                                {/* Iridescent Text Effect */}
+                                <div className="text-8xl md:text-9xl font-black tracking-tighter drop-shadow-2xl bg-gradient-to-r from-white via-purple-100 to-white bg-clip-text text-transparent animate-text-shimmer bg-[length:200%_auto]">
+                                    {loadingEconomy ? "..." : economy?.balance.toLocaleString()}
+                                </div>
+                                <span className="text-5xl md:text-6xl text-gray-500 font-medium ml-4 relative top-1">₪</span>
                             </div>
 
                             {/* Main Action Button */}

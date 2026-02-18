@@ -24,9 +24,7 @@ const LoginScreen: React.FC = () => {
             {/* Header / Logo */}
             <div className="mb-12 relative group cursor-default">
                 <div className="absolute -inset-4 bg-purple-500/30 blur-xl rounded-full opacity-50 group-hover:opacity-75 transition-opacity duration-500"></div>
-                <h1 className="relative text-7xl font-black tracking-tighter text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.3)]">
-                    NULL<span className="text-transparent bg-clip-text bg-gradient-to-br from-purple-400 to-indigo-400">X</span>
-                </h1>
+                <img src="/logo/Nullx.png" alt="NullX" className="relative h-16 w-auto object-contain drop-shadow-[0_0_15px_rgba(255,255,255,0.3)]" />
                 <div className="mt-4 flex items-center justify-center gap-3 opacity-60">
                    <div className="h-px w-8 bg-gradient-to-r from-transparent via-white to-transparent"></div>
                    <p className="text-[10px] font-mono text-purple-200 uppercase tracking-[0.4em] drop-shadow-md">Панель Персонала</p>
