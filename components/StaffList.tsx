@@ -95,6 +95,9 @@ const StaffList: React.FC<StaffListProps> = ({ currentUser, onLogout, onSelectUs
     (m.ign && m.ign.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
+  // Find current user member object to pass to Wiki
+  const currentMember = staff.find(m => m.user.id === currentUser.id);
+
   return (
     <div className="min-h-screen bg-[#020202] text-white font-sans p-6 flex flex-col items-center">
       
@@ -187,7 +190,7 @@ const StaffList: React.FC<StaffListProps> = ({ currentUser, onLogout, onSelectUs
             
             {/* VIEW: WIKI/INFORMATION */}
             {viewMode === 'WIKI' && (
-                <Wiki />
+                <Wiki currentMember={currentMember} />
             )}
 
             {/* VIEW: STAFF LIST */}

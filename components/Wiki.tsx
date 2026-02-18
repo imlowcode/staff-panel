@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
+import { GuildMember } from '../types';
+import { ROLE_HIERARCHY } from '../constants';
 
 // --- ICONS ---
 const Icons = {
@@ -7,25 +9,95 @@ const Icons = {
     TrendingUp: () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>,
     DollarSign: () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>,
     ChevronRight: () => <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>,
+    ChevronDown: () => <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>,
     AlertTriangle: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>,
     Check: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>,
     X: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>,
     Terminal: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>,
     Award: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="7"></circle><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"></polyline></svg>,
-    Clock: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+    Clock: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>,
+    ExternalLink: () => <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>,
+    Command: () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>
 };
 
-type WikiPage = 'REGULATIONS' | 'CHEATS' | 'PROMOTIONS' | 'SALARY';
+interface WikiProps {
+    currentMember?: GuildMember;
+}
 
-const Wiki: React.FC = () => {
+type WikiPage = 'REGULATIONS' | 'CHEATS' | 'COMMANDS' | 'PROMOTIONS' | 'SALARY';
+
+// Role IDs mapped to numeric levels for progress tracking
+const ROLE_LEVELS: Record<string, number> = {
+    '1459285694458626222': 0, // Trainee
+    '1458158059187732666': 1, // Jr Mod
+    '1458158896894967879': 2, // Moderator
+    '1458159110720589944': 3, // Sr Moderator
+    '1458277039399374991': 4, // Curator
+    '1458159802105594061': 5  // Chief
+};
+
+const AccordionItem = ({ title, children, defaultOpen = false }: { title: string, children: React.ReactNode, defaultOpen?: boolean }) => {
+    const [isOpen, setIsOpen] = useState(defaultOpen);
+
+    return (
+        <div className="bg-[#111] border border-white/5 rounded-xl overflow-hidden transition-all duration-300">
+            <button 
+                onClick={() => setIsOpen(!isOpen)}
+                className="w-full flex items-center justify-between p-4 hover:bg-white/5 transition-colors group"
+            >
+                <div className="flex items-center gap-3">
+                    <div className={`p-1.5 rounded-lg bg-white/5 text-gray-400 group-hover:text-white group-hover:bg-white/10 transition-colors`}>
+                        <Icons.Terminal />
+                    </div>
+                    <span className="text-sm font-bold uppercase tracking-wider text-gray-300 group-hover:text-white">{title}</span>
+                </div>
+                <div className={`text-gray-500 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`}>
+                    <Icons.ChevronDown />
+                </div>
+            </button>
+            <div className={`transition-all duration-300 ease-in-out overflow-hidden ${isOpen ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'}`}>
+                <div className="p-4 pt-0 border-t border-white/5">
+                    <div className="h-4"></div>
+                    <div className="space-y-2">
+                        {children}
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+const CommandRow = ({ cmd, desc }: { cmd: string, desc?: string }) => (
+    <div className="bg-[#0A0A0A] border border-white/5 rounded-lg p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2 group hover:border-white/10 transition-colors">
+        <code className="text-xs font-mono text-purple-300 bg-purple-500/10 px-2 py-1 rounded border border-purple-500/20 w-fit select-all">
+            {cmd}
+        </code>
+        {desc && <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wide text-right">{desc}</span>}
+    </div>
+);
+
+const Wiki: React.FC<WikiProps> = ({ currentMember }) => {
     const [activePage, setActivePage] = useState<WikiPage>('REGULATIONS');
 
     const menuItems: { id: WikiPage; label: string; icon: React.FC }[] = [
         { id: 'REGULATIONS', label: 'Внутренний регламент', icon: Icons.Book },
+        { id: 'COMMANDS', label: 'Команды', icon: Icons.Command },
         { id: 'CHEATS', label: 'Проверка на читы', icon: Icons.Shield },
         { id: 'PROMOTIONS', label: 'Повышения', icon: Icons.TrendingUp },
         { id: 'SALARY', label: 'Зарплата', icon: Icons.DollarSign },
     ];
+
+    // Calculate current user level
+    const userLevel = useMemo(() => {
+        if (!currentMember) return -1;
+        let maxLevel = -1;
+        currentMember.roles.forEach(roleId => {
+            if (ROLE_LEVELS[roleId] !== undefined) {
+                maxLevel = Math.max(maxLevel, ROLE_LEVELS[roleId]);
+            }
+        });
+        return maxLevel;
+    }, [currentMember]);
 
     const renderContent = () => {
         switch (activePage) {
@@ -57,10 +129,6 @@ const Wiki: React.FC = () => {
                                 <span className="text-red-400 font-bold block mb-1">Важно:</span>
                                 При достижении максимального количества предупреждений, модератор снимается с должности. 
                                 Выговор выдается сроком от одной до двух недель.
-                            </div>
-                            <div className="flex gap-2 text-xs font-mono text-gray-500">
-                                <span className="px-2 py-1 bg-white/5 rounded">Снятие: по сроку</span>
-                                <span className="px-2 py-1 bg-white/5 rounded">Снятие: за активность (сверхнорма)</span>
                             </div>
                         </section>
 
@@ -119,6 +187,20 @@ const Wiki: React.FC = () => {
                          {/* Punishment Reasons */}
                          <section>
                             <h2 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-4">Причины наказаний</h2>
+                            
+                            {/* NEW: Example Command Block */}
+                            <div className="bg-gradient-to-r from-purple-900/10 to-blue-900/10 border border-purple-500/20 p-5 rounded-xl mb-6 flex flex-col gap-3">
+                                <div className="flex items-center gap-2 text-purple-400 font-black text-xs uppercase tracking-widest">
+                                    <Icons.Terminal /> Пример выдачи
+                                </div>
+                                <div className="bg-black/50 rounded-lg p-3 font-mono text-xs text-gray-300 border border-white/5">
+                                    /tempban ItsCreo 7d <span className="text-purple-400 font-bold underline decoration-wavy decoration-purple-500/50">Пункт 4.3</span>
+                                </div>
+                                <p className="text-[10px] text-gray-400 leading-relaxed">
+                                    <span className="text-red-400 font-bold">ОБЯЗАТЕЛЬНО:</span> Слово "Пункт" перед номером правила писать обязательно! Без этого причина считается некорректной.
+                                </p>
+                            </div>
+
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div className="bg-emerald-900/10 border border-emerald-500/20 p-4 rounded-xl">
                                     <div className="flex items-center gap-2 text-emerald-400 font-bold text-xs uppercase mb-2">
@@ -144,33 +226,70 @@ const Wiki: React.FC = () => {
                          </section>
                     </div>
                 );
+            case 'COMMANDS':
+                return (
+                    <div className="space-y-8 animate-fade-in pb-10">
+                        <div className="border-b border-white/5 pb-6">
+                            <h1 className="text-3xl font-black text-white uppercase tracking-tight">Команды</h1>
+                            <p className="text-gray-500 text-sm mt-2 font-mono">Справочник команд для модерации.</p>
+                        </div>
+
+                        <div className="space-y-3">
+                            <AccordionItem title="Проверка (Check)" defaultOpen={true}>
+                                <CommandRow cmd="/contact [сообщение]" desc="Связь с игроком" />
+                                <CommandRow cmd="/revise [игрок] start [discord/anydesk]" desc="Начать проверку" />
+                                <CommandRow cmd="/revise [игрок] finish" desc="Игрок чист" />
+                                <CommandRow cmd="/revise [игрок] go" desc="+2 минуты" />
+                                <CommandRow cmd="/revise [игрок] rt" desc="Убрать таймер" />
+                            </AccordionItem>
+
+                            <AccordionItem title="Баны (Bans)">
+                                <CommandRow cmd='/tempban "ник" "время" "причина"' desc="Временный бан" />
+                                <CommandRow cmd='/ban "ник" "причина"' desc="Бан навсегда (время пустое)" />
+                                <CommandRow cmd='/ban-ip "ник" "время" "причина"' desc="Бан по IP" />
+                            </AccordionItem>
+
+                            <AccordionItem title="Муты (Mutes)">
+                                <CommandRow cmd='/tempmute "ник" "время" "причина"' desc="Временный мут" />
+                                <CommandRow cmd='/mute "ник" "причина"' desc="Мут навсегда" />
+                                <CommandRow cmd='/mute-ip "ник" "время" "причина"' desc="Мут по IP" />
+                            </AccordionItem>
+
+                             <AccordionItem title="Слежка (Spec)">
+                                <CommandRow cmd='/spec go "ник" "причина"' desc="Начать слежку" />
+                                <CommandRow cmd='/spec off' desc="Закончить слежку" />
+                            </AccordionItem>
+                        </div>
+                    </div>
+                );
             case 'CHEATS':
                 return (
                     <div className="space-y-8 animate-fade-in pb-10">
                          <div className="border-b border-white/5 pb-6">
                             <h1 className="text-3xl font-black text-white uppercase tracking-tight">Проверка на читы</h1>
-                            <p className="text-gray-500 text-sm mt-2 font-mono">Инструментарий и команды для проведения проверок.</p>
+                            <p className="text-gray-500 text-sm mt-2 font-mono">Методические материалы.</p>
                         </div>
 
-                        <section className="space-y-4">
-                            {[
-                                { cmd: "/contact [сообщение]", desc: "Отправить сообщение сотруднику и игроку (чат проверки)." },
-                                { cmd: "/revise [игрок] start [discord/anydesk]", desc: "Начать проверку выбранным способом." },
-                                { cmd: "/revise [игрок] finish", desc: "Завершить проверку (игрок чист)." },
-                                { cmd: "/revise [игрок] go", desc: "Добавить 2 минуты к таймеру." },
-                                { cmd: "/revise [игрок] rt", desc: "Убрать таймер (отключает автобан при выходе)." },
-                            ].map((item, idx) => (
-                                <div key={idx} className="bg-[#111] rounded-xl border border-white/5 overflow-hidden group">
-                                    <div className="bg-white/5 px-4 py-2 border-b border-white/5 flex items-center gap-2">
-                                        <Icons.Terminal />
-                                        <span className="font-mono text-xs text-purple-300 font-bold">{item.cmd}</span>
-                                    </div>
-                                    <div className="px-4 py-3 text-sm text-gray-400">
-                                        {item.desc}
-                                    </div>
-                                </div>
-                            ))}
-                        </section>
+                        <div className="p-8 bg-gradient-to-br from-[#111] to-[#0d0d0d] border border-white/5 rounded-2xl flex flex-col items-center justify-center text-center gap-6 group hover:border-blue-500/30 transition-all">
+                             <div className="w-16 h-16 bg-blue-500/10 rounded-full flex items-center justify-center text-blue-400 shadow-[0_0_20px_rgba(59,130,246,0.2)] group-hover:scale-110 transition-transform duration-500">
+                                 <Icons.Book />
+                             </div>
+                             <div>
+                                <h3 className="text-white font-bold text-xl mb-2">Мануал по проверкам</h3>
+                                <p className="text-gray-400 text-sm max-w-md mx-auto leading-relaxed">
+                                    Полная инструкция по выявлению стороннего ПО, работе с AnyDesk и Process Hacker.
+                                </p>
+                             </div>
+                             
+                             <a 
+                                href="https://docs.google.com/document/d/1Z4rMTVPlx6JnveAWcXi25xT1vP9kszFnJhGLh31PTws/edit?tab=t.0#heading=h.pvg5l5t96qdg" 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-8 py-3 rounded-xl font-bold uppercase tracking-wider text-xs transition-all shadow-lg hover:shadow-blue-500/20 hover:-translate-y-1"
+                             >
+                                Открыть Мануал <Icons.ExternalLink />
+                             </a>
+                        </div>
                     </div>
                 );
             case 'PROMOTIONS':
@@ -182,11 +301,13 @@ const Wiki: React.FC = () => {
                         </div>
 
                         <div className="relative border-l-2 border-white/10 ml-3 space-y-12 py-2">
-                            {/* Step 1 */}
+                            {/* Step 1: Trainee -> JrMod */}
                             <div className="relative pl-8">
-                                <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-[#111] border-2 border-emerald-500"></div>
-                                <h3 className="text-lg font-bold text-white mb-1">Trainee <span className="text-gray-500 mx-2">→</span> Junior Moderator</h3>
-                                <div className="bg-[#111] border border-white/5 p-4 rounded-xl mt-3 space-y-2">
+                                <div className={`absolute -left-[9px] top-0 w-4 h-4 rounded-full border-2 transition-all duration-500 z-10 ${userLevel >= 0 ? 'bg-emerald-500 border-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]' : 'bg-[#111] border-gray-700'}`}></div>
+                                <div className={`absolute left-[-1px] top-4 w-[2px] h-[calc(100%+48px)] transition-all duration-700 ${userLevel >= 1 ? 'bg-emerald-500' : 'bg-transparent'}`}></div>
+                                
+                                <h3 className={`text-lg font-bold mb-1 ${userLevel >= 0 ? 'text-white' : 'text-gray-500'}`}>Trainee <span className="text-gray-600 mx-2">→</span> Junior Moderator</h3>
+                                <div className={`bg-[#111] border p-4 rounded-xl mt-3 space-y-2 transition-colors ${userLevel >= 0 ? 'border-emerald-500/30' : 'border-white/5 opacity-50'}`}>
                                     <div className="flex items-center gap-2 text-xs text-gray-400"><Icons.Clock /> Отработать минимум 3 дня</div>
                                     <div className="flex items-center gap-2 text-xs text-gray-400"><Icons.Check /> Не иметь активных выговоров</div>
                                     <div className="flex items-center gap-2 text-xs text-gray-400"><Icons.TrendingUp /> Показать хороший актив</div>
@@ -194,11 +315,13 @@ const Wiki: React.FC = () => {
                                 </div>
                             </div>
 
-                             {/* Step 2 */}
+                             {/* Step 2: JrMod -> Moderator */}
                              <div className="relative pl-8">
-                                <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-[#111] border-2 border-blue-500"></div>
-                                <h3 className="text-lg font-bold text-white mb-1">Junior Moderator <span className="text-gray-500 mx-2">→</span> Moderator</h3>
-                                <div className="bg-[#111] border border-white/5 p-4 rounded-xl mt-3 space-y-2">
+                                <div className={`absolute -left-[9px] top-0 w-4 h-4 rounded-full border-2 transition-all duration-500 z-10 ${userLevel >= 1 ? 'bg-blue-500 border-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.5)]' : 'bg-[#111] border-gray-700'}`}></div>
+                                <div className={`absolute left-[-1px] top-4 w-[2px] h-[calc(100%+48px)] transition-all duration-700 ${userLevel >= 2 ? 'bg-blue-500' : 'bg-transparent'}`}></div>
+
+                                <h3 className={`text-lg font-bold mb-1 ${userLevel >= 1 ? 'text-white' : 'text-gray-500'}`}>Junior Moderator <span className="text-gray-600 mx-2">→</span> Moderator</h3>
+                                <div className={`bg-[#111] border p-4 rounded-xl mt-3 space-y-2 transition-colors ${userLevel >= 1 ? 'border-blue-500/30' : 'border-white/5 opacity-50'}`}>
                                     <div className="flex items-center gap-2 text-xs text-gray-400"><Icons.Clock /> Отработать минимум 10 дней</div>
                                     <div className="text-xs text-gray-400 pl-6 border-l border-white/10 ml-1">
                                         • Более 50 банов<br/>
@@ -208,11 +331,13 @@ const Wiki: React.FC = () => {
                                 </div>
                             </div>
 
-                            {/* Step 3 */}
+                            {/* Step 3: Moderator -> Senior */}
                             <div className="relative pl-8">
-                                <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-[#111] border-2 border-purple-500"></div>
-                                <h3 className="text-lg font-bold text-white mb-1">Moderator <span className="text-gray-500 mx-2">→</span> Senior Moderator</h3>
-                                <div className="bg-[#111] border border-white/5 p-4 rounded-xl mt-3 space-y-2">
+                                <div className={`absolute -left-[9px] top-0 w-4 h-4 rounded-full border-2 transition-all duration-500 z-10 ${userLevel >= 2 ? 'bg-purple-500 border-purple-500 shadow-[0_0_10px_rgba(168,85,247,0.5)]' : 'bg-[#111] border-gray-700'}`}></div>
+                                <div className={`absolute left-[-1px] top-4 w-[2px] h-[calc(100%+48px)] transition-all duration-700 ${userLevel >= 3 ? 'bg-purple-500' : 'bg-transparent'}`}></div>
+
+                                <h3 className={`text-lg font-bold mb-1 ${userLevel >= 2 ? 'text-white' : 'text-gray-500'}`}>Moderator <span className="text-gray-600 mx-2">→</span> Senior Moderator</h3>
+                                <div className={`bg-[#111] border p-4 rounded-xl mt-3 space-y-2 transition-colors ${userLevel >= 2 ? 'border-purple-500/30' : 'border-white/5 opacity-50'}`}>
                                     <div className="flex items-center gap-2 text-xs text-gray-400"><Icons.Clock /> Отработать минимум 1.5 месяца</div>
                                     <div className="flex items-center gap-2 text-xs text-gray-400"><Icons.Shield /> Хороший опыт проверок</div>
                                      <div className="text-xs text-gray-400 pl-6 border-l border-white/10 ml-1">
@@ -223,11 +348,12 @@ const Wiki: React.FC = () => {
                                 </div>
                             </div>
 
-                             {/* Step 4 */}
+                             {/* Step 4: Senior -> Curator */}
                              <div className="relative pl-8">
-                                <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-[#111] border-2 border-orange-500"></div>
-                                <h3 className="text-lg font-bold text-white mb-1">Senior Moderator <span className="text-gray-500 mx-2">→</span> Curator</h3>
-                                <div className="bg-[#111] border border-white/5 p-4 rounded-xl mt-3 space-y-2">
+                                <div className={`absolute -left-[9px] top-0 w-4 h-4 rounded-full border-2 transition-all duration-500 z-10 ${userLevel >= 3 ? 'bg-orange-500 border-orange-500 shadow-[0_0_10px_rgba(249,115,22,0.5)]' : 'bg-[#111] border-gray-700'}`}></div>
+                                
+                                <h3 className={`text-lg font-bold mb-1 ${userLevel >= 3 ? 'text-white' : 'text-gray-500'}`}>Senior Moderator <span className="text-gray-600 mx-2">→</span> Curator</h3>
+                                <div className={`bg-[#111] border p-4 rounded-xl mt-3 space-y-2 transition-colors ${userLevel >= 3 ? 'border-orange-500/30' : 'border-white/5 opacity-50'}`}>
                                     <div className="flex items-center gap-2 text-xs text-orange-400 font-bold"><Icons.Award /> Назначение по усмотрению руководства</div>
                                 </div>
                             </div>
