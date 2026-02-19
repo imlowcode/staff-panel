@@ -3,7 +3,6 @@ import { GuildMember, DiscordUser } from '../types';
 import { fetchStaffMembers } from '../services/discordService';
 import { ROLE_HIERARCHY, ALLOWED_ADMIN_IDS } from '../constants';
 import Wiki from './Wiki';
-import Casino from './Casino';
 
 interface StaffListProps {
   currentUser: DiscordUser;
@@ -20,8 +19,7 @@ const Icons = {
     Shield: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>,
     Activity: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>,
     List: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>,
-    Info: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>,
-    Dices: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 8h.01"></path><path d="M8 8h.01"></path><path d="M8 16h.01"></path><path d="M16 16h.01"></path><path d="M12 12h.01"></path></svg>
+    Info: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
 };
 
 // --- TOOLTIP COMPONENT ---
@@ -44,8 +42,8 @@ const StaffList: React.FC<StaffListProps> = ({ currentUser, onLogout, onSelectUs
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   
-  // VIEW MODE: 'MEMBERS' (List) OR 'WIKI' (Information) OR 'CASINO'
-  const [viewMode, setViewMode] = useState<'MEMBERS' | 'WIKI' | 'CASINO'>('MEMBERS');
+  // VIEW MODE: 'MEMBERS' (List) OR 'WIKI' (Information)
+  const [viewMode, setViewMode] = useState<'MEMBERS' | 'WIKI'>('MEMBERS');
 
   useEffect(() => {
     const loadStaff = async () => {
@@ -137,12 +135,6 @@ const StaffList: React.FC<StaffListProps> = ({ currentUser, onLogout, onSelectUs
                    >
                        <Icons.Info /> Информация
                    </button>
-                   <button 
-                        onClick={() => setViewMode('CASINO')}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all duration-300 ${viewMode === 'CASINO' ? 'bg-white text-black shadow-lg' : 'text-gray-500 hover:text-white hover:bg-white/5'}`}
-                   >
-                       <Icons.Dices /> Казино
-                   </button>
                </div>
             </div>
 
@@ -199,11 +191,6 @@ const StaffList: React.FC<StaffListProps> = ({ currentUser, onLogout, onSelectUs
             {/* VIEW: WIKI/INFORMATION */}
             {viewMode === 'WIKI' && (
                 <Wiki currentMember={currentMember} />
-            )}
-
-            {/* VIEW: CASINO */}
-            {viewMode === 'CASINO' && (
-                <Casino currentUser={currentUser} onBack={() => setViewMode('MEMBERS')} />
             )}
 
             {/* VIEW: STAFF LIST */}
